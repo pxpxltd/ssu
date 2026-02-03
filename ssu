@@ -1,0 +1,1012 @@
+#!/usr/bin/env bash
+#
+# smart-submodule-update.sh - Intelligent git submodule updater
+# Version 1.0.4
+#
+# Features:
+#   - Smart branch detection (develop → master → main → remote default)
+#   - Interactive and batch modes
+#   - Dry-run preview
+#   - Backup and rollback support
+#   - Conflict handling with stash/retry
+#   - Compatible with Bash 3.2+ (macOS compatible)
+#
+# Usage: ./scripts/smart-submodule-update.sh [OPTIONS]
+#
+
+set -euo pipefail
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(pwd)"
+LOG_DIR="$PROJECT_ROOT/logs"
+BACKUP_PREFIX=".submodule-backup"
+
+# Submodules to skip (deprecated or special handling)
+SKIP_LIST=(
+    # Add paths here if needed, e.g.:
+    # "plugins/golem15/deprecated"
+)
+
+# Branch detection priority
+BRANCH_PRIORITY=("develop" "master" "main")
+
+# Parallel fetch jobs (can override with PARALLEL_JOBS env var)
+DEFAULT_PARALLEL_JOBS=8
+
+# =============================================================================
+# COLORS AND FORMATTING
+# =============================================================================
+
+if [[ -t 1 ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[0;33m'
+    BLUE='\033[0;34m'
+    MAGENTA='\033[0;35m'
+    CYAN='\033[0;36m'
+    WHITE='\033[1;37m'
+    GRAY='\033[0;90m'
+    BOLD='\033[1m'
+    NC='\033[0m' # No Color
+else
+    RED='' GREEN='' YELLOW='' BLUE='' MAGENTA='' CYAN='' WHITE='' GRAY='' BOLD='' NC=''
+fi
+
+# =============================================================================
+# GLOBAL STATE
+# =============================================================================
+
+MODE="interactive"  # interactive or auto
+DRY_RUN=false
+FAIL_FAST=false
+STATUS_ONLY=false
+OVERRIDE_BRANCH=""
+ROLLBACK_FILE=""
+
+# Bash 3.2 compatible: Use indexed arrays instead of associative arrays
+SUBMODULE_PATHS=()
+SUBMODULE_STATUS=()
+SUBMODULE_BRANCH=()
+SUBMODULE_CURRENT_BRANCH=()
+SUBMODULE_IS_FEATURE=()
+SUBMODULE_BEHIND=()
+SUBMODULE_CHANGELOG=()
+
+UPDATED_COUNT=0
+SKIPPED_COUNT=0
+CONFLICT_COUNT=0
+ERROR_COUNT=0
+
+# =============================================================================
+# ARRAY HELPERS (Bash 3.2 compatible associative array simulation)
+# =============================================================================
+
+# Get the index of a path in the SUBMODULE_PATHS array
+# Returns index via echo, returns 0 if found, 1 if not found
+_get_path_index() {
+    local path="$1"
+    local i
+    for i in "${!SUBMODULE_PATHS[@]}"; do
+        if [[ "${SUBMODULE_PATHS[$i]}" == "$path" ]]; then
+            echo "$i"
+            return 0
+        fi
+    done
+    echo ""
+    return 1
+}
+
+# Set value in an array by path
+set_array_value() {
+    local array_name="$1"
+    local path="$2"
+    local value="$3"
+    local idx
+    local i
+
+    # Find existing index or create new one
+    idx=""
+    for i in "${!SUBMODULE_PATHS[@]}"; do
+        if [[ "${SUBMODULE_PATHS[$i]}" == "$path" ]]; then
+            idx="$i"
+            break
+        fi
+    done
+
+    # If not found, add new entry
+    if [[ -z "$idx" ]]; then
+        idx=${#SUBMODULE_PATHS[@]}
+        SUBMODULE_PATHS[$idx]="$path"
+    fi
+
+    eval "${array_name}[$idx]=\"\$value\""
+}
+
+# Get value from an array by path
+get_array_value() {
+    local array_name="$1"
+    local path="$2"
+    local idx
+    local i
+
+    # Find the index
+    for i in "${!SUBMODULE_PATHS[@]}"; do
+        if [[ "${SUBMODULE_PATHS[$i]}" == "$path" ]]; then
+            idx="$i"
+            eval "echo \"\${${array_name}[$idx]:-}\""
+            return 0
+        fi
+    done
+
+    # Not found, return empty
+    echo ""
+    return 1
+}
+
+# =============================================================================
+# LOGGING
+# =============================================================================
+
+log() {
+    local level="$1"
+    shift
+    local message="$*"
+    local timestamp
+    timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+
+    mkdir -p "$LOG_DIR"
+    echo "[$timestamp] [$level] $message" >> "$LOG_DIR/submodule-update.log"
+}
+
+print_status() {
+    local status="$1"
+    local message="$2"
+
+    case "$status" in
+        INFO)     echo -e "${BLUE}[INFO]${NC} $message" ;;
+        SUCCESS)  echo -e "${GREEN}[SUCCESS]${NC} $message" ;;
+        WARNING)  echo -e "${YELLOW}[WARNING]${NC} $message" ;;
+        ERROR)    echo -e "${RED}[ERROR]${NC} $message" ;;
+        UPDATED)  echo -e "${GREEN}[UPDATED]${NC} $message" ;;
+        SKIPPED)  echo -e "${GRAY}[SKIPPED]${NC} $message" ;;
+        CONFLICT) echo -e "${RED}[CONFLICT]${NC} $message" ;;
+        UPTODATE) echo -e "${CYAN}[UP-TO-DATE]${NC} $message" ;;
+        *)        echo "$message" ;;
+    esac
+}
+
+# =============================================================================
+# USAGE AND HELP
+# =============================================================================
+
+usage() {
+    echo -e "${BOLD}smart-submodule-update.sh${NC} - Intelligent git submodule updater
+
+${BOLD}USAGE:${NC}
+    $0 [OPTIONS]
+
+${BOLD}OPTIONS:${NC}
+    -h, --help              Show this help message
+    -a, --auto              Batch mode (no prompts, update all)
+    -d, --dry-run           Preview changes without applying
+    -b, --branch BRANCH     Override branch for all submodules
+    -f, --fail-fast         Stop on first conflict/error
+    -s, --status            Show status table only
+    -r, --rollback FILE     Rollback from backup file
+
+${BOLD}EXAMPLES:${NC}
+    $0                      Interactive mode (default)
+    $0 --status             Show status of all submodules
+    $0 --dry-run            Preview what would be updated
+    $0 --auto               Update all submodules automatically
+    $0 --branch develop     Force all to use develop branch
+    $0 --rollback .submodule-backup-20240101-120000.json
+
+${BOLD}OUTPUT LEGEND:${NC}
+    ${GREEN}pending${NC}     Has updates available
+    ${CYAN}current${NC}     Already up-to-date
+    ${YELLOW}modified${NC}    Has local uncommitted changes
+    ${MAGENTA}ahead${NC}       Has unpushed commits
+    ${RED}conflict${NC}    Merge conflict detected
+"
+}
+
+# =============================================================================
+# ARGUMENT PARSING
+# =============================================================================
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            -a|--auto)
+                MODE="auto"
+                shift
+                ;;
+            -d|--dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            -b|--branch)
+                if [[ -z "${2:-}" ]]; then
+                    print_status ERROR "Missing branch name for --branch"
+                    exit 1
+                fi
+                OVERRIDE_BRANCH="$2"
+                shift 2
+                ;;
+            -f|--fail-fast)
+                FAIL_FAST=true
+                shift
+                ;;
+            -s|--status)
+                STATUS_ONLY=true
+                shift
+                ;;
+            -r|--rollback)
+                if [[ -z "${2:-}" ]]; then
+                    print_status ERROR "Missing backup file for --rollback"
+                    exit 1
+                fi
+                ROLLBACK_FILE="$2"
+                shift 2
+                ;;
+            *)
+                print_status ERROR "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+is_skipped() {
+    local path="$1"
+    # Handle empty skip list
+    if [[ ${#SKIP_LIST[@]} -eq 0 ]]; then
+        return 1
+    fi
+    for skip in "${SKIP_LIST[@]}"; do
+        if [[ "$path" == "$skip" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Check if submodule is initialized (has .git file or directory)
+is_submodule_initialized() {
+    local path="$1"
+    # Submodules have either a .git directory OR a .git file with gitdir reference
+    [[ -e "$PROJECT_ROOT/$path/.git" ]]
+}
+
+get_submodule_paths() {
+    git config --file .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | sort
+}
+
+# Detect the best branch for a submodule
+# Note: Call this AFTER fetch so remote refs are available locally
+detect_best_branch() {
+    local path="$1"
+
+    # If override specified, use it
+    if [[ -n "$OVERRIDE_BRANCH" ]]; then
+        echo "$OVERRIDE_BRANCH"
+        return
+    fi
+
+    cd "$PROJECT_ROOT/$path"
+
+    # Get remote branches from local refs (no network - uses cached refs from fetch)
+    local remote_branches
+    remote_branches=$(git branch -r 2>/dev/null | sed 's|origin/||' | tr -d ' ')
+
+    # Try branches in priority order
+    for branch in "${BRANCH_PRIORITY[@]}"; do
+        if echo "$remote_branches" | grep -qx "$branch"; then
+            echo "$branch"
+            cd "$PROJECT_ROOT"
+            return
+        fi
+    done
+
+    # Fallback: get default branch from cached remote HEAD
+    local default_branch
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+    if [[ -z "$default_branch" ]] && [[ -n "$remote_branches" ]]; then
+        # Use first available from priority list or first remote branch
+        default_branch=$(echo "$remote_branches" | head -1)
+    fi
+
+    if [[ -n "$default_branch" ]]; then
+        echo "$default_branch"
+    else
+        echo "master"  # Ultimate fallback
+    fi
+
+    cd "$PROJECT_ROOT"
+}
+
+get_current_sha() {
+    local path="$1"
+    cd "$PROJECT_ROOT/$path"
+    git rev-parse HEAD 2>/dev/null
+    cd "$PROJECT_ROOT"
+}
+
+get_current_branch() {
+    local path="$1"
+    cd "$PROJECT_ROOT/$path"
+    git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached"
+    cd "$PROJECT_ROOT"
+}
+
+has_local_changes() {
+    local path="$1"
+    cd "$PROJECT_ROOT/$path"
+    # Check for modifications, staged changes, or untracked files
+    ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [[ -n "$(git status --porcelain 2>/dev/null)" ]]
+    local result=$?
+    cd "$PROJECT_ROOT"
+    return $result
+}
+
+has_unpushed_commits() {
+    local path="$1"
+    cd "$PROJECT_ROOT/$path"
+
+    # Get the current branch
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+    # Check if current branch has a tracking remote
+    if [[ -n "$current_branch" ]] && [[ "$current_branch" != "HEAD" ]]; then
+        local count
+        count=$(git rev-list --count "origin/$current_branch..HEAD" 2>/dev/null || echo "0")
+        cd "$PROJECT_ROOT"
+        [[ "$count" -gt 0 ]]
+    else
+        cd "$PROJECT_ROOT"
+        return 1
+    fi
+}
+
+is_detached_head() {
+    local path="$1"
+    cd "$PROJECT_ROOT/$path"
+    local ref
+    ref=$(git symbolic-ref -q HEAD 2>/dev/null || echo "")
+    cd "$PROJECT_ROOT"
+    [[ -z "$ref" ]]
+}
+
+get_commits_behind() {
+    local path="$1"
+    local branch="$2"
+    cd "$PROJECT_ROOT/$path"
+
+    # Note: fetch already done in scan_submodules via fetch_submodule
+    local count
+    count=$(git rev-list --count "HEAD..origin/$branch" 2>/dev/null || echo "0")
+    cd "$PROJECT_ROOT"
+    echo "$count"
+}
+
+get_incoming_changelog() {
+    local path="$1"
+    local branch="$2"
+    local limit="${3:-10}"
+
+    cd "$PROJECT_ROOT/$path"
+    git log --oneline "HEAD..origin/$branch" -n "$limit" 2>/dev/null || echo ""
+    cd "$PROJECT_ROOT"
+}
+
+# =============================================================================
+# BACKUP AND ROLLBACK
+# =============================================================================
+
+create_backup() {
+    local timestamp
+    timestamp="$(date '+%Y%m%d-%H%M%S')"
+    local backup_file="$PROJECT_ROOT/${BACKUP_PREFIX}-${timestamp}.json"
+
+    echo "{" > "$backup_file"
+    echo '  "timestamp": "'"$(date -Iseconds)"'",' >> "$backup_file"
+    echo '  "submodules": {' >> "$backup_file"
+
+    local paths
+    paths=$(get_submodule_paths)
+    local first=true
+
+    for path in $paths; do
+        if ! is_submodule_initialized "$path"; then
+            continue
+        fi
+
+        local sha
+        sha=$(get_current_sha "$path")
+        local branch
+        branch=$(get_current_branch "$path")
+
+        if [[ "$first" == true ]]; then
+            first=false
+        else
+            echo "," >> "$backup_file"
+        fi
+
+        echo -n "    \"$path\": {\"sha\": \"$sha\", \"branch\": \"$branch\"}" >> "$backup_file"
+    done
+
+    echo "" >> "$backup_file"
+    echo "  }" >> "$backup_file"
+    echo "}" >> "$backup_file"
+
+    echo "$backup_file"
+}
+
+rollback_submodule() {
+    local path="$1"
+    local sha="$2"
+
+    print_status INFO "Rolling back $path to $sha"
+
+    cd "$PROJECT_ROOT/$path"
+    git checkout "$sha" --quiet 2>/dev/null
+    cd "$PROJECT_ROOT"
+
+    log INFO "Rolled back $path to $sha"
+}
+
+rollback_all() {
+    local backup_file="$1"
+
+    if [[ ! -f "$backup_file" ]]; then
+        print_status ERROR "Backup file not found: $backup_file"
+        exit 1
+    fi
+
+    print_status INFO "Rolling back from: $backup_file"
+    echo ""
+
+    # Parse JSON manually (no jq dependency)
+    while IFS= read -r line; do
+        # Match lines like: "plugins/golem15/ai": {"sha": "abc123", "branch": "develop"}
+        if [[ "$line" =~ \"([^\"]+)\":[[:space:]]*\{\"sha\":[[:space:]]*\"([a-f0-9]+)\" ]]; then
+            local path="${BASH_REMATCH[1]}"
+            local sha="${BASH_REMATCH[2]}"
+
+            if is_submodule_initialized "$path"; then
+                rollback_submodule "$path" "$sha"
+                print_status SUCCESS "Restored: $path"
+            else
+                print_status WARNING "Skipping (not found): $path"
+            fi
+        fi
+    done < "$backup_file"
+
+    echo ""
+    print_status SUCCESS "Rollback complete"
+}
+
+# =============================================================================
+# UPDATE FUNCTIONS
+# =============================================================================
+
+fetch_submodule() {
+    local path="$1"
+    local branch="$2"
+
+    cd "$PROJECT_ROOT/$path"
+    git fetch origin "$branch" --quiet 2>/dev/null
+    cd "$PROJECT_ROOT"
+}
+
+update_submodule() {
+    local path="$1"
+    local branch="$2"
+
+    cd "$PROJECT_ROOT/$path"
+
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+
+    # Checkout branch if needed
+    if [[ "$current_branch" != "$branch" ]]; then
+        git checkout "$branch" --quiet 2>/dev/null || {
+            # Try to create tracking branch
+            git checkout -b "$branch" "origin/$branch" --quiet 2>/dev/null || {
+                cd "$PROJECT_ROOT"
+                return 1
+            }
+        }
+    fi
+
+    # Pull/merge from remote
+    git merge "origin/$branch" --quiet 2>/dev/null || {
+        cd "$PROJECT_ROOT"
+        return 1
+    }
+
+    cd "$PROJECT_ROOT"
+    return 0
+}
+
+handle_conflict() {
+    local path="$1"
+    local branch="$2"
+
+    print_status WARNING "Conflict in $path - attempting stash and retry"
+
+    cd "$PROJECT_ROOT/$path"
+
+    # Stash local changes
+    git stash --quiet 2>/dev/null || true
+
+    # Try update again
+    if git merge "origin/$branch" --quiet 2>/dev/null; then
+        # Try to restore stash
+        git stash pop --quiet 2>/dev/null || {
+            print_status WARNING "Stash could not be applied cleanly to $path"
+            print_status INFO "Your changes are saved in stash. Run: cd $path && git stash pop"
+        }
+        cd "$PROJECT_ROOT"
+        return 0
+    else
+        # Abort merge
+        git merge --abort 2>/dev/null || true
+        # Restore stash
+        git stash pop --quiet 2>/dev/null || true
+        cd "$PROJECT_ROOT"
+        return 1
+    fi
+}
+
+# =============================================================================
+# STATUS AND DISPLAY
+# =============================================================================
+
+scan_submodules() {
+    local paths
+    paths=$(get_submodule_paths)
+    local initialized_paths=()
+
+    # Phase 1: Quick local checks (no network)
+    for path in $paths; do
+        if is_skipped "$path"; then
+            set_array_value "SUBMODULE_STATUS" "$path" "skipped"
+            continue
+        fi
+
+        if ! is_submodule_initialized "$path"; then
+            set_array_value "SUBMODULE_STATUS" "$path" "missing"
+            continue
+        fi
+
+        initialized_paths+=("$path")
+    done
+
+    # Phase 2: Parallel fetch all submodules at once (biggest speedup)
+    if [[ ${#initialized_paths[@]} -gt 0 ]]; then
+        local num_jobs=${PARALLEL_JOBS:-$DEFAULT_PARALLEL_JOBS}
+        print_status INFO "Fetching ${#initialized_paths[@]} submodules (${num_jobs} parallel jobs)..."
+
+        # Use background jobs with a semaphore pattern for controlled parallelism
+        local job_count=0
+        for path in "${initialized_paths[@]}"; do
+            (
+                cd "$PROJECT_ROOT/$path"
+                git fetch --all --quiet 2>/dev/null || true
+            ) &
+            job_count=$((job_count + 1))
+
+            # Limit parallel jobs
+            if [[ $job_count -ge $num_jobs ]]; then
+                wait -n 2>/dev/null || wait  # wait -n waits for any job (bash 4.3+)
+                job_count=$((job_count - 1))
+            fi
+        done
+        wait  # Wait for remaining jobs
+    fi
+
+    # Phase 3: Process each submodule (now uses cached data)
+    for path in "${initialized_paths[@]}"; do
+        # Get current branch
+        local current_branch
+        current_branch=$(get_current_branch "$path")
+        set_array_value "SUBMODULE_CURRENT_BRANCH" "$path" "$current_branch"
+
+        # Detect best branch (uses cached remote refs from fetch)
+        local branch
+        branch=$(detect_best_branch "$path")
+        set_array_value "SUBMODULE_BRANCH" "$path" "$branch"
+
+        # Check if current branch is a feature branch (not in priority list)
+        local is_feature="No"
+        if [[ "$current_branch" != "develop" ]] && [[ "$current_branch" != "master" ]] && [[ "$current_branch" != "main" ]] && [[ "$current_branch" != "detached" ]]; then
+            is_feature="Yes"
+        fi
+        set_array_value "SUBMODULE_IS_FEATURE" "$path" "$is_feature"
+
+        # Check status (no network needed - refs already fetched)
+        local behind
+        behind=$(get_commits_behind "$path" "$branch")
+        set_array_value "SUBMODULE_BEHIND" "$path" "$behind"
+
+        # Get changelog
+        if [[ "$behind" -gt 0 ]]; then
+            set_array_value "SUBMODULE_CHANGELOG" "$path" "$(get_incoming_changelog "$path" "$branch" 5)"
+        fi
+
+        # Determine status
+        if has_local_changes "$path"; then
+            set_array_value "SUBMODULE_STATUS" "$path" "modified"
+        elif has_unpushed_commits "$path" 2>/dev/null; then
+            set_array_value "SUBMODULE_STATUS" "$path" "ahead"
+        elif [[ "$behind" -gt 0 ]]; then
+            set_array_value "SUBMODULE_STATUS" "$path" "pending"
+        else
+            set_array_value "SUBMODULE_STATUS" "$path" "current"
+        fi
+    done
+}
+
+display_status_table() {
+    local max_path_len=40
+    local max_branch_len=12  # Minimum width for "BRANCH" header
+
+    # Calculate maximum branch name length
+    for path in $(get_submodule_paths | sort); do
+        local current_branch
+        current_branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" "$path")
+        current_branch=${current_branch:-N/A}
+        if [[ ${#current_branch} -gt $max_branch_len ]]; then
+            max_branch_len=${#current_branch}
+        fi
+    done
+
+    # Cap branch length at 30 to prevent extremely wide tables
+    if [[ $max_branch_len -gt 30 ]]; then
+        max_branch_len=30
+    fi
+
+    # Calculate total width for separator
+    local total_width=$((max_path_len + max_branch_len + 6 + 8 + 12 + 8))
+
+    printf "\n${BOLD}%-${max_path_len}s  %-${max_branch_len}s  %6s  %-8s  %-12s${NC}\n" \
+        "SUBMODULE" "BRANCH" "BEHIND" "FEATURE" "STATUS"
+    printf "%s\n" "$(printf '=%.0s' $(seq 1 $total_width))"
+
+    for path in $(get_submodule_paths | sort); do
+        local status
+        status=$(get_array_value "SUBMODULE_STATUS" "$path")
+        status=${status:-unknown}
+        local current_branch
+        current_branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" "$path")
+        current_branch=${current_branch:-N/A}
+        local behind
+        behind=$(get_array_value "SUBMODULE_BEHIND" "$path")
+        behind=${behind:-0}
+        local is_feature
+        is_feature=$(get_array_value "SUBMODULE_IS_FEATURE" "$path")
+        is_feature=${is_feature:-N/A}
+
+        # Truncate path if too long
+        local display_path="$path"
+        if [[ ${#path} -gt $max_path_len ]]; then
+            display_path="...${path: -$((max_path_len-3))}"
+        fi
+
+        # Truncate branch if too long
+        local display_branch="$current_branch"
+        if [[ ${#current_branch} -gt $max_branch_len ]]; then
+            display_branch="...${current_branch: -$((max_branch_len-3))}"
+        fi
+
+        # Color based on status
+        local status_color=""
+        case "$status" in
+            pending)  status_color="$GREEN" ;;
+            current)  status_color="$CYAN" ;;
+            modified) status_color="$YELLOW" ;;
+            ahead)    status_color="$MAGENTA" ;;
+            conflict) status_color="$RED" ;;
+            skipped)  status_color="$GRAY" ;;
+            missing)  status_color="$RED" ;;
+            *)        status_color="$NC" ;;
+        esac
+
+        # Color for feature branch
+        local feature_color="$NC"
+        if [[ "$is_feature" == "Yes" ]]; then
+            feature_color="$YELLOW"
+        fi
+
+        printf "%-${max_path_len}s  %-${max_branch_len}s  %6s  ${feature_color}%-8s${NC}  ${status_color}%-12s${NC}\n" \
+            "$display_path" "$display_branch" "$behind" "$is_feature" "$status"
+    done
+
+    echo ""
+}
+
+show_preview() {
+    local path="$1"
+    local changelog
+    changelog=$(get_array_value "SUBMODULE_CHANGELOG" "$path")
+
+    if [[ -n "$changelog" ]]; then
+        echo ""
+        echo -e "${CYAN}Incoming commits for $path:${NC}"
+        echo "$changelog" | while IFS= read -r line; do
+            echo "  $line"
+        done
+    fi
+}
+
+# =============================================================================
+# INTERACTIVE MODE
+# =============================================================================
+
+prompt_selection() {
+    local pending_paths=()
+
+    for path in $(get_submodule_paths | sort); do
+        local status
+        status=$(get_array_value "SUBMODULE_STATUS" "$path")
+        if [[ "$status" == "pending" ]]; then
+            pending_paths+=("$path")
+        fi
+    done
+
+    if [[ ${#pending_paths[@]} -eq 0 ]]; then
+        print_status INFO "All submodules are up-to-date!"
+        return 1
+    fi
+
+    echo ""
+    echo -e "${BOLD}${#pending_paths[@]} submodule(s) have updates available.${NC}"
+    echo ""
+    echo "Select: [a]ll, [n]one, [s]pecific (enter numbers), [q]uit"
+    read -rp "> " selection
+
+    case "$selection" in
+        a|A|all)
+            for path in "${pending_paths[@]}"; do
+                set_array_value "SUBMODULE_STATUS" "$path" "selected"
+            done
+            ;;
+        n|N|none)
+            return 1
+            ;;
+        q|Q|quit)
+            exit 0
+            ;;
+        s|S|specific)
+            echo ""
+            local i=1
+            for path in "${pending_paths[@]}"; do
+                local behind
+                behind=$(get_array_value "SUBMODULE_BEHIND" "$path")
+                echo "  $i) $path ($behind behind)"
+                ((i++))
+            done
+            echo ""
+            echo "Enter numbers separated by spaces (e.g., 1 3 5):"
+            read -rp "> " numbers
+
+            for num in $numbers; do
+                if [[ "$num" =~ ^[0-9]+$ ]] && [[ "$num" -ge 1 ]] && [[ "$num" -le ${#pending_paths[@]} ]]; then
+                    local idx=$((num - 1))
+                    set_array_value "SUBMODULE_STATUS" "${pending_paths[$idx]}" "selected"
+                fi
+            done
+            ;;
+        *)
+            print_status WARNING "Invalid selection, trying again..."
+            prompt_selection
+            ;;
+    esac
+
+    return 0
+}
+
+confirm_update() {
+    local path="$1"
+
+    if [[ "$MODE" == "auto" ]]; then
+        return 0
+    fi
+
+    show_preview "$path"
+    echo ""
+    read -rp "Update $path? [y/N]: " confirm
+
+    case "$confirm" in
+        y|Y|yes|Yes)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# =============================================================================
+# MAIN PROCESSING
+# =============================================================================
+
+process_updates() {
+    local backup_file
+
+    if [[ "$DRY_RUN" == false ]]; then
+        backup_file=$(create_backup)
+        print_status INFO "Backup created: $backup_file"
+        echo ""
+    fi
+
+    for path in $(get_submodule_paths | sort); do
+        local status
+        status=$(get_array_value "SUBMODULE_STATUS" "$path")
+        status=${status:-unknown}
+        local branch
+        branch=$(get_array_value "SUBMODULE_BRANCH" "$path")
+        branch=${branch:-master}
+
+        # Skip if not selected/pending
+        if [[ "$MODE" == "interactive" ]]; then
+            if [[ "$status" != "selected" ]]; then
+                continue
+            fi
+        else
+            if [[ "$status" != "pending" ]]; then
+                continue
+            fi
+        fi
+
+        local behind
+        behind=$(get_array_value "SUBMODULE_BEHIND" "$path")
+        behind=${behind:-0}
+        echo ""
+        echo -e "${BOLD}Processing: $path${NC} ($behind commits behind on $branch)"
+
+        if [[ "$DRY_RUN" == true ]]; then
+            show_preview "$path"
+            print_status INFO "[DRY-RUN] Would update $path"
+            ((SKIPPED_COUNT++))
+            continue
+        fi
+
+        # Interactive: confirm each update
+        if [[ "$MODE" == "interactive" ]]; then
+            if ! confirm_update "$path"; then
+                print_status SKIPPED "$path"
+                ((SKIPPED_COUNT++))
+                continue
+            fi
+        fi
+
+        # Perform update
+        if update_submodule "$path" "$branch"; then
+            print_status UPDATED "$path"
+            ((UPDATED_COUNT++))
+            log INFO "Updated $path to latest $branch"
+        else
+            # Try conflict handling
+            if handle_conflict "$path" "$branch"; then
+                print_status UPDATED "$path (after conflict resolution)"
+                ((UPDATED_COUNT++))
+                log INFO "Updated $path after conflict resolution"
+            else
+                print_status CONFLICT "$path"
+                ((CONFLICT_COUNT++))
+                log ERROR "Conflict in $path could not be resolved"
+
+                if [[ "$FAIL_FAST" == true ]]; then
+                    print_status ERROR "Stopping due to --fail-fast"
+                    return 1
+                fi
+            fi
+        fi
+    done
+
+    return 0
+}
+
+print_summary() {
+    echo ""
+    echo "=========================================="
+    echo -e "${BOLD}               SUMMARY${NC}"
+    echo "=========================================="
+    echo -e "  ${GREEN}Updated:${NC}   $UPDATED_COUNT"
+    echo -e "  ${GRAY}Skipped:${NC}   $SKIPPED_COUNT"
+    echo -e "  ${RED}Conflicts:${NC} $CONFLICT_COUNT"
+    echo "=========================================="
+
+    if [[ $UPDATED_COUNT -gt 0 ]] && [[ "$DRY_RUN" == false ]]; then
+        echo ""
+        echo "To commit these submodule updates:"
+        echo "  git add plugins/"
+        echo "  git commit -m 'Update submodules to latest'"
+    fi
+
+    echo ""
+}
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+main() {
+    cd "$PROJECT_ROOT"
+
+    parse_args "$@"
+
+    log INFO "Starting smart-submodule-update (mode=$MODE, dry_run=$DRY_RUN)"
+
+    # Handle rollback
+    if [[ -n "$ROLLBACK_FILE" ]]; then
+        rollback_all "$ROLLBACK_FILE"
+        exit 0
+    fi
+
+    echo ""
+    echo -e "${BOLD}Smart Submodule Update${NC}"
+    echo ""
+
+    # Check we're in a git repo with submodules
+    if [[ ! -f ".gitmodules" ]]; then
+        print_status ERROR "No .gitmodules found. Are you in the project root?"
+        exit 1
+    fi
+
+    # Scan all submodules
+    print_status INFO "Scanning submodules..."
+    scan_submodules
+
+    # Display status table
+    display_status_table
+
+    # Status only mode
+    if [[ "$STATUS_ONLY" == true ]]; then
+        exit 0
+    fi
+
+    # Interactive selection
+    if [[ "$MODE" == "interactive" ]]; then
+        if ! prompt_selection; then
+            print_status INFO "No updates selected."
+            exit 0
+        fi
+    fi
+
+    # Process updates
+    if ! process_updates; then
+        print_summary
+        exit 2
+    fi
+
+    print_summary
+
+    # Exit codes
+    if [[ $CONFLICT_COUNT -gt 0 ]]; then
+        exit 2
+    elif [[ $ERROR_COUNT -gt 0 ]]; then
+        exit 1
+    else
+        exit 0
+    fi
+}
+
+main "$@"
