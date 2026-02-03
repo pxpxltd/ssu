@@ -538,15 +538,15 @@ main() {
         print_status SUCCESS "Installation complete!"
         echo ""
         echo -e "${BOLD}Next steps:${NC}"
-        echo "  1. Run: ${CYAN}ssu --help${NC}"
+        echo -e "  1. Run: ${CYAN}ssu --help${NC}"
         echo "  2. Navigate to a project with submodules"
-        echo "  3. Run: ${CYAN}ssu --status${NC}"
+        echo -e "  3. Run: ${CYAN}ssu --status${NC}"
         echo ""
     else
         echo ""
         print_status INFO "Installation complete, but you may need to:"
         echo "  1. Restart your shell or run: source $config_file"
-        echo "  2. Then try: ${CYAN}ssu --help${NC}"
+        echo -e "  2. Then try: ${CYAN}ssu --help${NC}"
         echo ""
     fi
 }

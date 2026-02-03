@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # smart-submodule-update.sh - Intelligent git submodule updater
-# Version 1.0.4
+# Version 1.0.5
 #
 # Features:
 #   - Smart branch detection (develop → master → main → remote default)
@@ -22,13 +22,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(pwd)"
-LOG_DIR="$PROJECT_ROOT/logs"
 BACKUP_PREFIX=".submodule-backup"
 
 # Backup directory configuration
 SSU_HOME="$HOME/.ssu"
 BACKUPS_ENABLED=true
 BACKUP_DIR=""
+LOG_DIR=""  # Will be set in main() based on project name
 
 # Submodules to skip (deprecated or special handling)
 SKIP_LIST=(
@@ -1041,6 +1041,11 @@ main() {
     cd "$PROJECT_ROOT"
 
     parse_args "$@"
+
+    # Initialize log directory based on project name
+    local project_name
+    project_name=$(get_project_name)
+    LOG_DIR="$SSU_HOME/$project_name/logs"
 
     log INFO "Starting smart-submodule-update (mode=$MODE, dry_run=$DRY_RUN)"
 

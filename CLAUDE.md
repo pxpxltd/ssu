@@ -79,8 +79,9 @@ If automatic resolution fails:
 
 ### Backup/Rollback Mechanism (lines 470-560)
 
-**Backup location:**
+**Backup and log location:**
 - Backups are stored in `~/.ssu/<project-name>/` (determined by project root directory name)
+- Logs are stored in `~/.ssu/<project-name>/logs/` (keeps project directory clean)
 - On first run, the script checks if `~/.ssu` and the project-specific directory exist
 - In interactive mode: prompts user to create directory if it doesn't exist
 - In auto mode (`--auto`): automatically creates the directory
@@ -302,12 +303,14 @@ Status column colors determined by `SUBMODULE_STATUS` value:
 
 ## Logging
 
-All operations logged to `logs/submodule-update.log`:
+All operations logged to `~/.ssu/<project-name>/logs/submodule-update.log`:
 ```
 [2024-01-15 10:30:00] [INFO] Starting submodule scan...
 [2024-01-15 10:30:05] [SUCCESS] Updated plugins/module1
 [2024-01-15 10:30:10] [ERROR] Conflict in plugins/module2
 ```
+
+This keeps the project directory clean - no log files clutter the repository.
 
 Use `log` function:
 ```bash

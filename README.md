@@ -316,10 +316,10 @@ If you encounter permission errors:
 All operations are logged to:
 
 ```
-logs/submodule-update.log
+~/.ssu/<project-name>/logs/submodule-update.log
 ```
 
-Check this file for detailed information about what happened during an update.
+This keeps the project directory clean. Check this file for detailed information about what happened during an update.
 
 ### Feature Branch Warning
 
@@ -352,7 +352,7 @@ Contributions are welcome! Here's how you can help:
 
 1. Check existing issues first
 2. Provide the output of `ssu --status`
-3. Include relevant log entries from `logs/submodule-update.log`
+3. Include relevant log entries from `~/.ssu/<project-name>/logs/submodule-update.log`
 4. Describe your environment (OS, Bash version, Git version)
 
 ### Pull Requests
