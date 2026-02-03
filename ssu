@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #
 # smart-submodule-update.sh - Intelligent git submodule updater
-# Version 1.0.5
+# Version 1.0.6
 #
 # Features:
 #   - Smart branch detection (develop → master → main → remote default)
 #   - Interactive and batch modes
+#   - Push ahead submodules
 #   - Dry-run preview
 #   - Backup and rollback support
 #   - Conflict handling with stash/retry
@@ -69,6 +70,7 @@ MODE="interactive"  # interactive or auto
 DRY_RUN=false
 FAIL_FAST=false
 STATUS_ONLY=false
+PUSH_MODE=false
 OVERRIDE_BRANCH=""
 ROLLBACK_FILE=""
 
@@ -85,6 +87,7 @@ UPDATED_COUNT=0
 SKIPPED_COUNT=0
 CONFLICT_COUNT=0
 ERROR_COUNT=0
+PUSHED_COUNT=0
 
 # =============================================================================
 # ARRAY HELPERS (Bash 3.2 compatible associative array simulation)
@@ -201,6 +204,7 @@ ${BOLD}OPTIONS:${NC}
     -b, --branch BRANCH     Override branch for all submodules
     -f, --fail-fast         Stop on first conflict/error
     -s, --status            Show status table only
+    -p, --push              Push modules with unpushed commits
     -r, --rollback FILE     Rollback from backup file
 
 ${BOLD}EXAMPLES:${NC}
@@ -208,6 +212,9 @@ ${BOLD}EXAMPLES:${NC}
     $0 --status             Show status of all submodules
     $0 --dry-run            Preview what would be updated
     $0 --auto               Update all submodules automatically
+    $0 --push               Push submodules with unpushed commits
+    $0 --push --auto        Push all ahead submodules automatically
+    $0 --push --dry-run     Preview what would be pushed
     $0 --branch develop     Force all to use develop branch
     $0 --rollback ~/.ssu/project-name/.submodule-backup-20240101-120000.json
 
@@ -258,6 +265,10 @@ parse_args() {
                 ;;
             -s|--status)
                 STATUS_ONLY=true
+                shift
+                ;;
+            -p|--push)
+                PUSH_MODE=true
                 shift
                 ;;
             -r|--rollback)
@@ -658,6 +669,42 @@ handle_conflict() {
     fi
 }
 
+push_submodule() {
+    local path="$1"
+
+    cd "$PROJECT_ROOT/$path"
+
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+
+    # Can't push from detached HEAD
+    if [[ "$current_branch" == "HEAD" ]] || [[ "$current_branch" == "detached" ]]; then
+        cd "$PROJECT_ROOT"
+        return 2  # Special return code for detached HEAD
+    fi
+
+    # Check if branch has a tracking remote
+    if ! git rev-parse --abbrev-ref --symbolic-full-name "@{upstream}" >/dev/null 2>&1; then
+        # No tracking branch - try to set up tracking and push
+        if git push -u origin "$current_branch" --quiet 2>/dev/null; then
+            cd "$PROJECT_ROOT"
+            return 0
+        else
+            cd "$PROJECT_ROOT"
+            return 1
+        fi
+    fi
+
+    # Push to tracking branch
+    if git push --quiet 2>/dev/null; then
+        cd "$PROJECT_ROOT"
+        return 0
+    else
+        cd "$PROJECT_ROOT"
+        return 1
+    fi
+}
+
 # =============================================================================
 # STATUS AND DISPLAY
 # =============================================================================
@@ -927,6 +974,89 @@ confirm_update() {
     esac
 }
 
+prompt_push_selection() {
+    local ahead_paths=()
+
+    for path in $(get_submodule_paths | sort); do
+        local status
+        status=$(get_array_value "SUBMODULE_STATUS" "$path")
+        if [[ "$status" == "ahead" ]]; then
+            ahead_paths+=("$path")
+        fi
+    done
+
+    if [[ ${#ahead_paths[@]} -eq 0 ]]; then
+        print_status INFO "No submodules with unpushed commits found!"
+        return 1
+    fi
+
+    echo ""
+    echo -e "${BOLD}${#ahead_paths[@]} submodule(s) have unpushed commits.${NC}"
+    echo ""
+    echo "Select: [a]ll, [n]one, [s]pecific (enter numbers), [q]uit"
+    read -rp "> " selection
+
+    case "$selection" in
+        a|A|all)
+            for path in "${ahead_paths[@]}"; do
+                set_array_value "SUBMODULE_STATUS" "$path" "push-selected"
+            done
+            ;;
+        n|N|none)
+            return 1
+            ;;
+        q|Q|quit)
+            exit 0
+            ;;
+        s|S|specific)
+            echo ""
+            local i=1
+            for path in "${ahead_paths[@]}"; do
+                local branch
+                branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" "$path")
+                echo "  $i) $path (branch: $branch)"
+                ((i++))
+            done
+            echo ""
+            echo "Enter numbers separated by spaces (e.g., 1 3 5):"
+            read -rp "> " numbers
+
+            for num in $numbers; do
+                if [[ "$num" =~ ^[0-9]+$ ]] && [[ "$num" -ge 1 ]] && [[ "$num" -le ${#ahead_paths[@]} ]]; then
+                    local idx=$((num - 1))
+                    set_array_value "SUBMODULE_STATUS" "${ahead_paths[$idx]}" "push-selected"
+                fi
+            done
+            ;;
+        *)
+            print_status WARNING "Invalid selection, trying again..."
+            prompt_push_selection
+            ;;
+    esac
+
+    return 0
+}
+
+confirm_push() {
+    local path="$1"
+
+    if [[ "$MODE" == "auto" ]]; then
+        return 0
+    fi
+
+    echo ""
+    read -rp "Push $path? [y/N]: " confirm
+
+    case "$confirm" in
+        y|Y|yes|Yes)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 # =============================================================================
 # MAIN PROCESSING
 # =============================================================================
@@ -1013,17 +1143,91 @@ process_updates() {
     return 0
 }
 
+process_pushes() {
+    echo ""
+
+    for path in $(get_submodule_paths | sort); do
+        local status
+        status=$(get_array_value "SUBMODULE_STATUS" "$path")
+        status=${status:-unknown}
+        local branch
+        branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" "$path")
+        branch=${branch:-unknown}
+
+        # Skip if not ahead or selected for push
+        if [[ "$MODE" == "interactive" ]]; then
+            if [[ "$status" != "push-selected" ]]; then
+                continue
+            fi
+        else
+            if [[ "$status" != "ahead" ]]; then
+                continue
+            fi
+        fi
+
+        echo ""
+        echo -e "${BOLD}Processing: $path${NC} (branch: $branch)"
+
+        if [[ "$DRY_RUN" == true ]]; then
+            print_status INFO "[DRY-RUN] Would push $path (branch: $branch)"
+            ((SKIPPED_COUNT++))
+            continue
+        fi
+
+        # Interactive: confirm each push
+        if [[ "$MODE" == "interactive" ]]; then
+            if ! confirm_push "$path"; then
+                print_status SKIPPED "$path"
+                ((SKIPPED_COUNT++))
+                continue
+            fi
+        fi
+
+        # Perform push
+        local push_result
+        push_submodule "$path"
+        push_result=$?
+
+        if [[ $push_result -eq 0 ]]; then
+            print_status SUCCESS "Pushed $path"
+            ((PUSHED_COUNT++))
+            log INFO "Pushed $path (branch: $branch)"
+        elif [[ $push_result -eq 2 ]]; then
+            print_status WARNING "Cannot push $path - detached HEAD state"
+            ((SKIPPED_COUNT++))
+            log WARNING "Skipped push for $path - detached HEAD"
+        else
+            print_status ERROR "Failed to push $path"
+            ((ERROR_COUNT++))
+            log ERROR "Failed to push $path"
+
+            if [[ "$FAIL_FAST" == true ]]; then
+                print_status ERROR "Stopping due to --fail-fast"
+                return 1
+            fi
+        fi
+    done
+
+    return 0
+}
+
 print_summary() {
     echo ""
     echo "=========================================="
     echo -e "${BOLD}               SUMMARY${NC}"
     echo "=========================================="
-    echo -e "  ${GREEN}Updated:${NC}   $UPDATED_COUNT"
-    echo -e "  ${GRAY}Skipped:${NC}   $SKIPPED_COUNT"
-    echo -e "  ${RED}Conflicts:${NC} $CONFLICT_COUNT"
+    if [[ "$PUSH_MODE" == true ]]; then
+        echo -e "  ${GREEN}Pushed:${NC}    $PUSHED_COUNT"
+        echo -e "  ${GRAY}Skipped:${NC}   $SKIPPED_COUNT"
+        echo -e "  ${RED}Errors:${NC}    $ERROR_COUNT"
+    else
+        echo -e "  ${GREEN}Updated:${NC}   $UPDATED_COUNT"
+        echo -e "  ${GRAY}Skipped:${NC}   $SKIPPED_COUNT"
+        echo -e "  ${RED}Conflicts:${NC} $CONFLICT_COUNT"
+    fi
     echo "=========================================="
 
-    if [[ $UPDATED_COUNT -gt 0 ]] && [[ "$DRY_RUN" == false ]]; then
+    if [[ $UPDATED_COUNT -gt 0 ]] && [[ "$DRY_RUN" == false ]] && [[ "$PUSH_MODE" == false ]]; then
         echo ""
         echo "To commit these submodule updates:"
         echo "  git add plugins/"
@@ -1080,6 +1284,32 @@ main() {
     # Status only mode
     if [[ "$STATUS_ONLY" == true ]]; then
         exit 0
+    fi
+
+    # Push mode
+    if [[ "$PUSH_MODE" == true ]]; then
+        # Interactive selection for push
+        if [[ "$MODE" == "interactive" ]]; then
+            if ! prompt_push_selection; then
+                print_status INFO "No pushes selected."
+                exit 0
+            fi
+        fi
+
+        # Process pushes
+        if ! process_pushes; then
+            print_summary
+            exit 2
+        fi
+
+        print_summary
+
+        # Exit codes
+        if [[ $ERROR_COUNT -gt 0 ]]; then
+            exit 1
+        else
+            exit 0
+        fi
     fi
 
     # Interactive selection

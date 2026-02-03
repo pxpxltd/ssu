@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SSU (Smart Submodule Updater) is a bash-based intelligent git submodule management tool. It provides interactive and automated workflows for updating submodules with smart branch detection, conflict handling, and backup/rollback capabilities.
+SSU (Smart Submodule Updater) is a bash-based intelligent git submodule management tool. It provides interactive and automated workflows for updating and pushing submodules with smart branch detection, conflict handling, and backup/rollback capabilities.
 
 **Key characteristics:**
 - Single executable bash script (`ssu`) - no dependencies beyond git and standard Unix tools
 - Bash 3.2+ compatible (macOS and Linux)
 - No external dependencies (jq, etc.) - uses manual JSON parsing
 - Designed for safety: backup-before-update, dry-run preview, rollback support
+- Push ahead submodules with automatic tracking branch setup
 
 ## Architecture
 
@@ -64,7 +65,7 @@ Access via helper functions:
 
 **Key insight:** Branch detection happens AFTER parallel fetch, so all remote refs are locally cached.
 
-### Conflict Handling Strategy (lines 547-575)
+### Conflict Handling Strategy (lines 631-659)
 
 Three-step automatic resolution:
 1. Detect merge failure
@@ -77,7 +78,40 @@ If automatic resolution fails:
 - User can resolve manually or use `--rollback`
 - With `--fail-fast`, script exits immediately
 
-### Backup/Rollback Mechanism (lines 470-560)
+### Push Workflow (lines 661-706)
+
+When `--push` flag is used, the script operates in push mode instead of update mode:
+
+**Detection:**
+- Identifies submodules with "ahead" status (unpushed commits)
+- Uses `has_unpushed_commits()` to detect commits not on remote
+
+**Push function (`push_submodule()`):**
+1. Check for detached HEAD state (cannot push)
+2. Detect tracking branch (`@{upstream}`)
+3. If no tracking branch: set up with `git push -u origin <branch>`
+4. If tracking branch exists: push with `git push`
+5. Return codes: 0=success, 1=error, 2=detached HEAD
+
+**Interactive mode:**
+- Shows list of ahead submodules
+- User selects which to push (all/none/specific)
+- Confirms each push individually
+
+**Auto mode (`--push --auto`):**
+- Automatically pushes all ahead submodules
+- No prompts or confirmations
+
+**Dry-run mode (`--push --dry-run`):**
+- Shows what would be pushed without pushing
+- Displays branch names and status
+
+**Special cases:**
+- Submodules in detached HEAD: skipped with warning
+- No tracking branch: automatically sets up `origin/<branch>` as upstream
+- Push failures: logged as errors, continues unless `--fail-fast`
+
+### Backup/Rollback Mechanism (lines 500-586)
 
 **Backup and log location:**
 - Backups are stored in `~/.ssu/<project-name>/` (determined by project root directory name)
@@ -320,11 +354,13 @@ log "ERROR" "Something failed"
 
 ## Version History
 
-Version information in script header (line 4). Current: 1.0.4
+Version information in script header (line 4). Current: 1.0.6
 
 **Recent changes (from git log):**
 - v1.0.3: Better detection of non-committed changes
-- v1.0.4: (Current version)
+- v1.0.4: Local .ssu folder with backups
+- v1.0.5: Store logs in home folder
+- v1.0.6: Add push functionality for ahead submodules (Current version)
 
 When incrementing version:
 1. Update line 4 in `ssu`

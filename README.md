@@ -2,7 +2,7 @@
 
 An intelligent git submodule updater with smart branch detection, interactive workflows, and robust conflict handling.
 
-[![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://github.com/yourusername/ssu)
+[![Version](https://img.shields.io/badge/version-1.0.6-blue.svg)](https://github.com/yourusername/ssu)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Bash](https://img.shields.io/badge/bash-3.2%2B-orange.svg)](https://www.gnu.org/software/bash/)
 
@@ -10,6 +10,7 @@ An intelligent git submodule updater with smart branch detection, interactive wo
 
 - **Smart Branch Detection** - Automatically detects the best branch to use (develop → master → main → remote default)
 - **Interactive & Batch Modes** - Choose between interactive prompts or fully automated updates
+- **Push Ahead Submodules** - Easily push submodules with unpushed commits
 - **Dry-Run Preview** - Preview changes before applying them
 - **Backup & Rollback** - Automatic backups with one-command rollback capability
 - **Intelligent Conflict Handling** - Automatically stash and retry on conflicts
@@ -81,6 +82,7 @@ ssu [OPTIONS]
 | `-b, --branch BRANCH` | Override branch for all submodules |
 | `-f, --fail-fast` | Stop on first conflict or error |
 | `-s, --status` | Show status table only (no updates) |
+| `-p, --push` | Push submodules with unpushed commits |
 | `-r, --rollback FILE` | Rollback from backup file |
 
 ### Status Legend
@@ -138,6 +140,27 @@ ssu --dry-run
 ```
 
 This shows which submodules have updates and displays the incoming commits.
+
+### Push Ahead Submodules
+
+When submodules have unpushed commits (shown as "ahead" in the status table), you can push them with:
+
+```bash
+# Interactive mode - select which submodules to push
+ssu --push
+
+# Batch mode - push all ahead submodules automatically
+ssu --push --auto
+
+# Preview what would be pushed without actually pushing
+ssu --push --dry-run
+```
+
+This is useful when you've made commits in multiple submodules and want to push them all at once. The script will:
+- Detect submodules with unpushed commits
+- Push to their tracking branches (or set up tracking if needed)
+- Skip submodules in detached HEAD state
+- Handle errors gracefully
 
 ### Force Specific Branch
 
