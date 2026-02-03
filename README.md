@@ -2,12 +2,14 @@
 
 An intelligent git submodule updater with smart branch detection, interactive workflows, and robust conflict handling.
 
-[![Version](https://img.shields.io/badge/version-1.0.6-blue.svg)](https://github.com/yourusername/ssu)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/yourusername/ssu)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Bash](https://img.shields.io/badge/bash-3.2%2B-orange.svg)](https://www.gnu.org/software/bash/)
 
 ## Features
 
+- **TUI Interactive Selector** - Navigate with arrow keys, toggle selections with space, visual checkboxes
+- **Root Repository Display** - Shows root repository status alongside submodules
 - **Smart Branch Detection** - Automatically detects the best branch to use (develop → master → main → remote default)
 - **Interactive & Batch Modes** - Choose between interactive prompts or fully automated updates
 - **Push Ahead Submodules** - Easily push submodules with unpushed commits
@@ -105,7 +107,11 @@ View the current state of all submodules without making changes:
 ssu --status
 ```
 
-This displays a table showing each submodule's current branch, how many commits it's behind, and whether it's on a feature branch.
+This displays a table showing:
+- **Root repository** status (displayed first as "(root)")
+- Each submodule's current branch, how many commits it's behind, and whether it's on a feature branch
+
+Note: The root repository is display-only and won't be included in update or push operations. Users manage the root repository manually.
 
 ### Interactive Update Workflow
 
@@ -116,10 +122,16 @@ ssu
 ```
 
 You'll be prompted to:
-1. View the status table
-2. Select which submodules to update (all, none, or specific ones)
+1. View the status table (including root repository status)
+2. Select which submodules to update using the TUI selector:
+   - Use **↑/↓** arrow keys or **j/k** (vim-style) to navigate
+   - Press **Space** to toggle selection on current item
+   - Press **a** to select all, **A** to deselect all
+   - Press **Enter** to confirm, **q** to quit
 3. Review incoming changes for each submodule
 4. Confirm each update individually
+
+The TUI provides visual feedback with checkboxes: `[✓]` for selected items, `[ ]` for unselected.
 
 ### Batch Update All Submodules
 

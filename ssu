@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # smart-submodule-update.sh - Intelligent git submodule updater
-# Version 1.0.6
+# Version 1.1.0
 #
 # Features:
 #   - Smart branch detection (develop → master → main → remote default)
@@ -89,6 +89,11 @@ CONFLICT_COUNT=0
 ERROR_COUNT=0
 PUSHED_COUNT=0
 
+# TUI state arrays
+TUI_ITEMS=()
+TUI_SELECTED=()
+TUI_CURSOR=0
+
 # =============================================================================
 # ARRAY HELPERS (Bash 3.2 compatible associative array simulation)
 # =============================================================================
@@ -153,6 +158,214 @@ get_array_value() {
     # Not found, return empty
     echo ""
     return 1
+}
+
+# =============================================================================
+# TUI FUNCTIONS
+# =============================================================================
+
+# Terminal control functions using tput with ANSI fallbacks
+hide_cursor() {
+    tput civis 2>/dev/null || printf '\033[?25l'
+}
+
+show_cursor() {
+    tput cnorm 2>/dev/null || printf '\033[?25h'
+}
+
+move_cursor_to_line() {
+    local line="$1"
+    tput cup "$line" 0 2>/dev/null || printf '\033[%d;0H' "$line"
+}
+
+clear_screen() {
+    tput clear 2>/dev/null || printf '\033[2J\033[H'
+}
+
+get_terminal_height() {
+    tput lines 2>/dev/null || echo 24
+}
+
+restore_terminal() {
+    show_cursor
+    echo ""
+}
+
+# Draw the TUI screen
+draw_tui_screen() {
+    local title="$1"
+    local metadata_array_name="$2"
+
+    clear_screen
+
+    # Header
+    echo -e "${BOLD}$title${NC}"
+    echo ""
+    echo -e "${GRAY}Navigation: ↑/k (up) ↓/j (down) | Space (toggle) | a (all) A (none) | Enter (confirm) q (quit)${NC}"
+    echo ""
+    printf "%s\n" "$(printf '=%.0s' $(seq 1 80))"
+
+    # Draw items
+    local i=0
+    for item in "${TUI_ITEMS[@]}"; do
+        local cursor_indicator="  "
+        if [ "$i" -eq "$TUI_CURSOR" ]; then
+            cursor_indicator="${CYAN}>${NC}"
+        fi
+
+        local checkbox="[ ]"
+        local item_color="$NC"
+        if [ "${TUI_SELECTED[$i]}" = "yes" ]; then
+            checkbox="${GREEN}[✓]${NC}"
+            item_color="$GREEN"
+        fi
+
+        # Get metadata for this item
+        local metadata=""
+        if [ -n "$metadata_array_name" ]; then
+            eval "metadata=\"\${${metadata_array_name}[$i]:-}\""
+        fi
+
+        echo -e "${cursor_indicator} ${checkbox} ${item_color}${item}${NC} ${GRAY}${metadata}${NC}"
+        i=$((i + 1))
+    done
+
+    echo ""
+    printf "%s\n" "$(printf '=%.0s' $(seq 1 80))"
+
+    # Footer with selection count
+    local selected_count=0
+    for sel in "${TUI_SELECTED[@]}"; do
+        if [ "$sel" = "yes" ]; then
+            selected_count=$((selected_count + 1))
+        fi
+    done
+    echo -e "${BOLD}Selected: ${selected_count}/${#TUI_ITEMS[@]}${NC}"
+}
+
+# Main TUI selector function
+# Returns: 0 if selections made, 1 if cancelled
+tui_select() {
+    local title="$1"
+    local items_array_name="$2"
+    local metadata_array_name="$3"
+
+    # Initialize TUI state from source array
+    TUI_ITEMS=()
+    TUI_SELECTED=()
+    TUI_CURSOR=0
+
+    eval "TUI_ITEMS=(\"\${${items_array_name}[@]}\")"
+
+    # If no items, return immediately
+    if [ "${#TUI_ITEMS[@]}" -eq 0 ]; then
+        return 1
+    fi
+
+    # Initialize all as unselected
+    local i
+    for i in "${!TUI_ITEMS[@]}"; do
+        TUI_SELECTED[$i]="no"
+    done
+
+    # Set up terminal
+    hide_cursor
+    trap restore_terminal EXIT INT TERM
+
+    # Main loop
+    while true; do
+        draw_tui_screen "$title" "$metadata_array_name"
+
+        # Read single character (no newline)
+        local key=""
+        IFS= read -rsn1 key
+
+        # Handle empty key (Enter pressed)
+        if [ -z "$key" ]; then
+            restore_terminal
+            trap - EXIT INT TERM
+
+            # Check if any selected
+            local any_selected=false
+            for sel in "${TUI_SELECTED[@]}"; do
+                if [ "$sel" = "yes" ]; then
+                    any_selected=true
+                    break
+                fi
+            done
+
+            if [ "$any_selected" = true ]; then
+                return 0
+            else
+                # No selections, show message and continue
+                echo ""
+                echo -e "${YELLOW}No items selected. Press 'a' to select all, 'q' to quit.${NC}"
+                sleep 1
+                continue
+            fi
+        fi
+
+        # Handle escape sequences (arrow keys)
+        if [ "$key" = $'\x1b' ]; then
+            # Read next characters for arrow keys
+            read -rsn1 -t 0.1 key2
+            if [ "$key2" = "[" ]; then
+                read -rsn1 -t 0.1 key3
+                case "$key3" in
+                    A)  # Up arrow
+                        if [ "$TUI_CURSOR" -gt 0 ]; then
+                            TUI_CURSOR=$((TUI_CURSOR - 1))
+                        fi
+                        ;;
+                    B)  # Down arrow
+                        if [ "$TUI_CURSOR" -lt $((${#TUI_ITEMS[@]} - 1)) ]; then
+                            TUI_CURSOR=$((TUI_CURSOR + 1))
+                        fi
+                        ;;
+                esac
+            fi
+        else
+            # Handle regular keys
+            case "$key" in
+                k|K)  # Vim up
+                    if [ "$TUI_CURSOR" -gt 0 ]; then
+                        TUI_CURSOR=$((TUI_CURSOR - 1))
+                    fi
+                    ;;
+                j|J)  # Vim down
+                    if [ "$TUI_CURSOR" -lt $((${#TUI_ITEMS[@]} - 1)) ]; then
+                        TUI_CURSOR=$((TUI_CURSOR + 1))
+                    fi
+                    ;;
+                ' ')  # Space - toggle selection
+                    if [ "${TUI_SELECTED[$TUI_CURSOR]}" = "yes" ]; then
+                        TUI_SELECTED[$TUI_CURSOR]="no"
+                    else
+                        TUI_SELECTED[$TUI_CURSOR]="yes"
+                    fi
+                    # Move cursor down after selecting (for convenience)
+                    if [ "$TUI_CURSOR" -lt $((${#TUI_ITEMS[@]} - 1)) ]; then
+                        TUI_CURSOR=$((TUI_CURSOR + 1))
+                    fi
+                    ;;
+                a)  # Select all
+                    for i in "${!TUI_ITEMS[@]}"; do
+                        TUI_SELECTED[$i]="yes"
+                    done
+                    ;;
+                A)  # Deselect all
+                    for i in "${!TUI_ITEMS[@]}"; do
+                        TUI_SELECTED[$i]="no"
+                    done
+                    ;;
+                q|Q)  # Quit
+                    restore_terminal
+                    trap - EXIT INT TERM
+                    return 1
+                    ;;
+            esac
+        fi
+    done
 }
 
 # =============================================================================
@@ -425,6 +638,65 @@ get_commits_behind() {
     echo "$count"
 }
 
+# =============================================================================
+# ROOT REPOSITORY FUNCTIONS
+# =============================================================================
+
+get_root_current_branch() {
+    cd "$PROJECT_ROOT"
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+    echo "$branch"
+}
+
+get_root_commits_behind() {
+    cd "$PROJECT_ROOT"
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+    if [ -z "$branch" ] || [ "$branch" = "HEAD" ]; then
+        echo "0"
+        return
+    fi
+
+    local count
+    count=$(git rev-list --count "HEAD..origin/$branch" 2>/dev/null || echo "0")
+    echo "$count"
+}
+
+get_root_status() {
+    cd "$PROJECT_ROOT"
+
+    # Check for local changes (modified/staged files)
+    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+        echo "modified"
+        return
+    fi
+
+    # Check for unpushed commits (ahead)
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    if [ -n "$branch" ] && [ "$branch" != "HEAD" ]; then
+        local count
+        count=$(git rev-list --count "origin/$branch..HEAD" 2>/dev/null || echo "0")
+        if [ "$count" -gt 0 ]; then
+            echo "ahead"
+            return
+        fi
+    fi
+
+    # Check if behind remote (pending)
+    local behind
+    behind=$(get_root_commits_behind)
+    if [ "$behind" -gt 0 ]; then
+        echo "pending"
+        return
+    fi
+
+    # Otherwise, current
+    echo "current"
+}
+
 get_incoming_changelog() {
     local path="$1"
     local branch="$2"
@@ -527,6 +799,11 @@ create_backup() {
     local first=true
 
     for path in $paths; do
+        # Skip root repository
+        if [ "$path" = "." ]; then
+            continue
+        fi
+
         if ! is_submodule_initialized "$path"; then
             continue
         fi
@@ -710,6 +987,21 @@ push_submodule() {
 # =============================================================================
 
 scan_submodules() {
+    # Phase 0: Scan root repository
+    print_status INFO "Scanning root repository..."
+    cd "$PROJECT_ROOT"
+    git fetch --all --quiet 2>/dev/null || true
+
+    local root_branch
+    root_branch=$(get_root_current_branch)
+    set_array_value "SUBMODULE_PATHS" "." "."
+    set_array_value "SUBMODULE_CURRENT_BRANCH" "." "$root_branch"
+    set_array_value "SUBMODULE_BRANCH" "." "$root_branch"
+    set_array_value "SUBMODULE_IS_FEATURE" "." "N/A"
+    set_array_value "SUBMODULE_BEHIND" "." "$(get_root_commits_behind)"
+    set_array_value "SUBMODULE_STATUS" "." "$(get_root_status)"
+    set_array_value "SUBMODULE_CHANGELOG" "." ""
+
     local paths
     paths=$(get_submodule_paths)
     local initialized_paths=()
@@ -794,11 +1086,79 @@ scan_submodules() {
     done
 }
 
+display_status_line() {
+    local path="$1"
+    local max_path_len="$2"
+    local max_branch_len="$3"
+
+    local status
+    status=$(get_array_value "SUBMODULE_STATUS" "$path")
+    status=${status:-unknown}
+    local current_branch
+    current_branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" "$path")
+    current_branch=${current_branch:-N/A}
+    local behind
+    behind=$(get_array_value "SUBMODULE_BEHIND" "$path")
+    behind=${behind:-0}
+    local is_feature
+    is_feature=$(get_array_value "SUBMODULE_IS_FEATURE" "$path")
+    is_feature=${is_feature:-N/A}
+
+    # Special handling for root
+    local display_path="$path"
+    local path_color=""
+    if [ "$path" = "." ]; then
+        display_path="(root)"
+        path_color="$BOLD"
+    else
+        # Truncate path if too long
+        if [[ ${#path} -gt $max_path_len ]]; then
+            display_path="...${path: -$((max_path_len-3))}"
+        fi
+    fi
+
+    # Truncate branch if too long
+    local display_branch="$current_branch"
+    if [[ ${#current_branch} -gt $max_branch_len ]]; then
+        display_branch="...${current_branch: -$((max_branch_len-3))}"
+    fi
+
+    # Color based on status
+    local status_color=""
+    case "$status" in
+        pending)  status_color="$GREEN" ;;
+        current)  status_color="$CYAN" ;;
+        modified) status_color="$YELLOW" ;;
+        ahead)    status_color="$MAGENTA" ;;
+        conflict) status_color="$RED" ;;
+        skipped)  status_color="$GRAY" ;;
+        missing)  status_color="$RED" ;;
+        *)        status_color="$NC" ;;
+    esac
+
+    # Color for feature branch
+    local feature_color="$NC"
+    if [[ "$is_feature" == "Yes" ]]; then
+        feature_color="$YELLOW"
+    fi
+
+    # Print with colors applied properly
+    printf "${path_color}%-${max_path_len}s${NC}  %-${max_branch_len}s  %6s  ${feature_color}%-8s${NC}  ${status_color}%-12s${NC}\n" \
+        "$display_path" "$display_branch" "$behind" "$is_feature" "$status"
+}
+
 display_status_table() {
     local max_path_len=40
     local max_branch_len=12  # Minimum width for "BRANCH" header
 
-    # Calculate maximum branch name length
+    # Calculate maximum branch name length (including root)
+    local root_branch
+    root_branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" ".")
+    root_branch=${root_branch:-N/A}
+    if [[ ${#root_branch} -gt $max_branch_len ]]; then
+        max_branch_len=${#root_branch}
+    fi
+
     for path in $(get_submodule_paths | sort); do
         local current_branch
         current_branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" "$path")
@@ -820,53 +1180,12 @@ display_status_table() {
         "SUBMODULE" "BRANCH" "BEHIND" "FEATURE" "STATUS"
     printf "%s\n" "$(printf '=%.0s' $(seq 1 $total_width))"
 
+    # Display root first
+    display_status_line "." "$max_path_len" "$max_branch_len"
+
+    # Then display submodules
     for path in $(get_submodule_paths | sort); do
-        local status
-        status=$(get_array_value "SUBMODULE_STATUS" "$path")
-        status=${status:-unknown}
-        local current_branch
-        current_branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" "$path")
-        current_branch=${current_branch:-N/A}
-        local behind
-        behind=$(get_array_value "SUBMODULE_BEHIND" "$path")
-        behind=${behind:-0}
-        local is_feature
-        is_feature=$(get_array_value "SUBMODULE_IS_FEATURE" "$path")
-        is_feature=${is_feature:-N/A}
-
-        # Truncate path if too long
-        local display_path="$path"
-        if [[ ${#path} -gt $max_path_len ]]; then
-            display_path="...${path: -$((max_path_len-3))}"
-        fi
-
-        # Truncate branch if too long
-        local display_branch="$current_branch"
-        if [[ ${#current_branch} -gt $max_branch_len ]]; then
-            display_branch="...${current_branch: -$((max_branch_len-3))}"
-        fi
-
-        # Color based on status
-        local status_color=""
-        case "$status" in
-            pending)  status_color="$GREEN" ;;
-            current)  status_color="$CYAN" ;;
-            modified) status_color="$YELLOW" ;;
-            ahead)    status_color="$MAGENTA" ;;
-            conflict) status_color="$RED" ;;
-            skipped)  status_color="$GRAY" ;;
-            missing)  status_color="$RED" ;;
-            *)        status_color="$NC" ;;
-        esac
-
-        # Color for feature branch
-        local feature_color="$NC"
-        if [[ "$is_feature" == "Yes" ]]; then
-            feature_color="$YELLOW"
-        fi
-
-        printf "%-${max_path_len}s  %-${max_branch_len}s  %6s  ${feature_color}%-8s${NC}  ${status_color}%-12s${NC}\n" \
-            "$display_path" "$display_branch" "$behind" "$is_feature" "$status"
+        display_status_line "$path" "$max_path_len" "$max_branch_len"
     done
 
     echo ""
@@ -892,12 +1211,21 @@ show_preview() {
 
 prompt_selection() {
     local pending_paths=()
+    local pending_meta=()
 
     for path in $(get_submodule_paths | sort); do
+        # Skip root repository
+        if [ "$path" = "." ]; then
+            continue
+        fi
+
         local status
         status=$(get_array_value "SUBMODULE_STATUS" "$path")
         if [[ "$status" == "pending" ]]; then
             pending_paths+=("$path")
+            local behind
+            behind=$(get_array_value "SUBMODULE_BEHIND" "$path")
+            pending_meta+=("($behind behind)")
         fi
     done
 
@@ -906,51 +1234,27 @@ prompt_selection() {
         return 1
     fi
 
-    echo ""
-    echo -e "${BOLD}${#pending_paths[@]} submodule(s) have updates available.${NC}"
-    echo ""
-    echo "Select: [a]ll, [n]one, [s]pecific (enter numbers), [q]uit"
-    read -rp "> " selection
-
-    case "$selection" in
-        a|A|all)
+    # Check if TTY for TUI mode
+    if [ -t 0 ] && [ -t 1 ]; then
+        # Use TUI selector
+        if tui_select "Select submodules to update (${#pending_paths[@]} available)" "pending_paths" "pending_meta"; then
+            # Apply selections
+            local i=0
             for path in "${pending_paths[@]}"; do
-                set_array_value "SUBMODULE_STATUS" "$path" "selected"
-            done
-            ;;
-        n|N|none)
-            return 1
-            ;;
-        q|Q|quit)
-            exit 0
-            ;;
-        s|S|specific)
-            echo ""
-            local i=1
-            for path in "${pending_paths[@]}"; do
-                local behind
-                behind=$(get_array_value "SUBMODULE_BEHIND" "$path")
-                echo "  $i) $path ($behind behind)"
-                ((i++))
-            done
-            echo ""
-            echo "Enter numbers separated by spaces (e.g., 1 3 5):"
-            read -rp "> " numbers
-
-            for num in $numbers; do
-                if [[ "$num" =~ ^[0-9]+$ ]] && [[ "$num" -ge 1 ]] && [[ "$num" -le ${#pending_paths[@]} ]]; then
-                    local idx=$((num - 1))
-                    set_array_value "SUBMODULE_STATUS" "${pending_paths[$idx]}" "selected"
+                if [ "${TUI_SELECTED[$i]}" = "yes" ]; then
+                    set_array_value "SUBMODULE_STATUS" "$path" "selected"
                 fi
+                i=$((i + 1))
             done
-            ;;
-        *)
-            print_status WARNING "Invalid selection, trying again..."
-            prompt_selection
-            ;;
-    esac
-
-    return 0
+            return 0
+        else
+            return 1
+        fi
+    else
+        # Non-TTY fallback: use --auto mode or exit
+        print_status WARNING "Non-interactive terminal detected. Use --auto for batch mode."
+        return 1
+    fi
 }
 
 confirm_update() {
@@ -976,12 +1280,21 @@ confirm_update() {
 
 prompt_push_selection() {
     local ahead_paths=()
+    local ahead_meta=()
 
     for path in $(get_submodule_paths | sort); do
+        # Skip root repository
+        if [ "$path" = "." ]; then
+            continue
+        fi
+
         local status
         status=$(get_array_value "SUBMODULE_STATUS" "$path")
         if [[ "$status" == "ahead" ]]; then
             ahead_paths+=("$path")
+            local branch
+            branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" "$path")
+            ahead_meta+=("(branch: $branch)")
         fi
     done
 
@@ -990,51 +1303,27 @@ prompt_push_selection() {
         return 1
     fi
 
-    echo ""
-    echo -e "${BOLD}${#ahead_paths[@]} submodule(s) have unpushed commits.${NC}"
-    echo ""
-    echo "Select: [a]ll, [n]one, [s]pecific (enter numbers), [q]uit"
-    read -rp "> " selection
-
-    case "$selection" in
-        a|A|all)
+    # Check if TTY for TUI mode
+    if [ -t 0 ] && [ -t 1 ]; then
+        # Use TUI selector
+        if tui_select "Select submodules to push (${#ahead_paths[@]} available)" "ahead_paths" "ahead_meta"; then
+            # Apply selections
+            local i=0
             for path in "${ahead_paths[@]}"; do
-                set_array_value "SUBMODULE_STATUS" "$path" "push-selected"
-            done
-            ;;
-        n|N|none)
-            return 1
-            ;;
-        q|Q|quit)
-            exit 0
-            ;;
-        s|S|specific)
-            echo ""
-            local i=1
-            for path in "${ahead_paths[@]}"; do
-                local branch
-                branch=$(get_array_value "SUBMODULE_CURRENT_BRANCH" "$path")
-                echo "  $i) $path (branch: $branch)"
-                ((i++))
-            done
-            echo ""
-            echo "Enter numbers separated by spaces (e.g., 1 3 5):"
-            read -rp "> " numbers
-
-            for num in $numbers; do
-                if [[ "$num" =~ ^[0-9]+$ ]] && [[ "$num" -ge 1 ]] && [[ "$num" -le ${#ahead_paths[@]} ]]; then
-                    local idx=$((num - 1))
-                    set_array_value "SUBMODULE_STATUS" "${ahead_paths[$idx]}" "push-selected"
+                if [ "${TUI_SELECTED[$i]}" = "yes" ]; then
+                    set_array_value "SUBMODULE_STATUS" "$path" "push-selected"
                 fi
+                i=$((i + 1))
             done
-            ;;
-        *)
-            print_status WARNING "Invalid selection, trying again..."
-            prompt_push_selection
-            ;;
-    esac
-
-    return 0
+            return 0
+        else
+            return 1
+        fi
+    else
+        # Non-TTY fallback: use --auto mode or exit
+        print_status WARNING "Non-interactive terminal detected. Use --auto for batch mode."
+        return 1
+    fi
 }
 
 confirm_push() {
@@ -1076,6 +1365,11 @@ process_updates() {
     fi
 
     for path in $(get_submodule_paths | sort); do
+        # Skip root repository
+        if [ "$path" = "." ]; then
+            continue
+        fi
+
         local status
         status=$(get_array_value "SUBMODULE_STATUS" "$path")
         status=${status:-unknown}
@@ -1147,6 +1441,11 @@ process_pushes() {
     echo ""
 
     for path in $(get_submodule_paths | sort); do
+        # Skip root repository
+        if [ "$path" = "." ]; then
+            continue
+        fi
+
         local status
         status=$(get_array_value "SUBMODULE_STATUS" "$path")
         status=${status:-unknown}

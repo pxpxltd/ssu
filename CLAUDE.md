@@ -12,25 +12,31 @@ SSU (Smart Submodule Updater) is a bash-based intelligent git submodule manageme
 - No external dependencies (jq, etc.) - uses manual JSON parsing
 - Designed for safety: backup-before-update, dry-run preview, rollback support
 - Push ahead submodules with automatic tracking branch setup
+- TUI-style interactive selector with arrow key navigation
+- Root repository status display alongside submodules
 
 ## Architecture
 
 ### Three-Phase Workflow
 
-1. **Scanning Phase** (lines 581-664 in `ssu`)
+1. **Scanning Phase**
+   - **Phase 0**: Scan root repository (fetch, detect status, display-only)
    - Parallel `git fetch --all` for all submodules (configurable via `PARALLEL_JOBS` env var, default 8)
    - Status analysis using cached remote refs (no additional network calls)
    - Smart branch detection: tries `develop` → `master` → `main` → remote HEAD → fallback
 
-2. **Display & Selection Phase** (lines 666-823)
-   - Colorized status table showing: path, current branch, target branch, commits behind, feature branch indicator
-   - Interactive mode: prompts for user selection (all/none/specific)
+2. **Display & Selection Phase**
+   - Colorized status table showing root repository first (as "(root)"), then submodules
+   - Table shows: path, current branch, commits behind, feature branch indicator, status
+   - Interactive mode: TUI selector with arrow key navigation, space to toggle, visual checkboxes
    - Batch mode (`--auto`): selects all "pending" submodules automatically
+   - Root repository is display-only, excluded from selection
 
-3. **Processing Phase** (lines 850-925)
-   - Creates timestamped JSON backup before any modifications
+3. **Processing Phase**
+   - Creates timestamped JSON backup before any modifications (excludes root)
    - Updates selected submodules with automatic conflict handling
    - Tracks counts: updated, skipped, conflicts, errors
+   - Root repository is excluded from all operations
 
 ### Bash 3.2 Compatible Array Simulation
 
@@ -111,7 +117,66 @@ When `--push` flag is used, the script operates in push mode instead of update m
 - No tracking branch: automatically sets up `origin/<branch>` as upstream
 - Push failures: logged as errors, continues unless `--fail-fast`
 
-### Backup/Rollback Mechanism (lines 500-586)
+### TUI Interactive Selector (v1.1.0+)
+
+**Terminal Control Functions:**
+- `hide_cursor()` / `show_cursor()` - cursor visibility using tput with ANSI fallbacks
+- `move_cursor_to_line(line)` - cursor positioning
+- `clear_screen()` - full screen clear
+- `get_terminal_height()` - terminal size detection
+- `restore_terminal()` - cleanup on exit (trap handler)
+
+**TUI State Management:**
+- `TUI_ITEMS[]` - items to display
+- `TUI_SELECTED[]` - selection state: "yes"/"no"
+- `TUI_CURSOR` - current cursor position
+
+**Core Function: `tui_select(title, items_array_name, metadata_array_name)`**
+1. Initialize TUI state arrays by copying from source array
+2. Set up terminal (hide cursor, trap for cleanup)
+3. Main loop:
+   - Redraw screen with `draw_tui_screen()`
+   - Read single character with `read -rsn1`
+   - Detect arrow keys (escape sequences `\x1b[A`, `\x1b[B`)
+   - Handle input: arrows/j/k (move), space (toggle), a/A (all/none), enter (confirm), q (quit)
+4. Restore terminal (show cursor, move to bottom)
+5. Return 0 if selections made, 1 if cancelled
+
+**TTY Detection:**
+- Both `prompt_selection()` and `prompt_push_selection()` check for TTY: `[ -t 0 ] && [ -t 1 ]`
+- If TTY: Use TUI selector with visual feedback
+- If not TTY: Show warning message to use `--auto` mode
+
+**Visual Feedback:**
+- Cursor indicator: `>` on current line (cyan)
+- Checkboxes: `[✓]` for selected (green), `[ ]` for unselected
+- Metadata displayed next to each item (gray)
+- Selection count shown in footer
+
+### Root Repository Display (v1.1.0+)
+
+**Root Status Functions:**
+- `get_root_current_branch()` - returns current branch or "detached"
+- `get_root_commits_behind()` - count of commits behind remote
+- `get_root_status()` - returns "modified", "ahead", "pending", or "current" (priority order)
+
+**Integration with Scanning:**
+- Root is scanned in Phase 0 of `scan_submodules()`
+- Stored in parallel arrays using "." as the key
+- Root data includes: branch, behind count, status, but no changelog
+
+**Display Logic:**
+- `display_status_line()` helper function renders a single row
+- Special handling: path "." displayed as "(root)" in bold
+- Root shown first in status table, then submodules sorted
+
+**Exclusion from Operations:**
+- Root is skipped in `prompt_selection()` and `prompt_push_selection()`
+- Root is excluded from `process_updates()` and `process_pushes()`
+- Root is not included in backup creation (`create_backup()`)
+- Users manage root repository manually
+
+### Backup/Rollback Mechanism
 
 **Backup and log location:**
 - Backups are stored in `~/.ssu/<project-name>/` (determined by project root directory name)
@@ -354,13 +419,14 @@ log "ERROR" "Something failed"
 
 ## Version History
 
-Version information in script header (line 4). Current: 1.0.6
+Version information in script header (line 4). Current: 1.1.0
 
 **Recent changes (from git log):**
 - v1.0.3: Better detection of non-committed changes
 - v1.0.4: Local .ssu folder with backups
 - v1.0.5: Store logs in home folder
-- v1.0.6: Add push functionality for ahead submodules (Current version)
+- v1.0.6: Add push functionality for ahead submodules
+- v1.1.0: TUI interactive selector + root repository display (Current version)
 
 When incrementing version:
 1. Update line 4 in `ssu`
