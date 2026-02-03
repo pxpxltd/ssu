@@ -25,6 +25,11 @@ PROJECT_ROOT="$(pwd)"
 LOG_DIR="$PROJECT_ROOT/logs"
 BACKUP_PREFIX=".submodule-backup"
 
+# Backup directory configuration
+SSU_HOME="$HOME/.ssu"
+BACKUPS_ENABLED=true
+BACKUP_DIR=""
+
 # Submodules to skip (deprecated or special handling)
 SKIP_LIST=(
     # Add paths here if needed, e.g.:
@@ -204,7 +209,12 @@ ${BOLD}EXAMPLES:${NC}
     $0 --dry-run            Preview what would be updated
     $0 --auto               Update all submodules automatically
     $0 --branch develop     Force all to use develop branch
-    $0 --rollback .submodule-backup-20240101-120000.json
+    $0 --rollback ~/.ssu/project-name/.submodule-backup-20240101-120000.json
+
+${BOLD}BACKUPS:${NC}
+    Backups are stored in: ~/.ssu/<project-name>/
+    On first run, you'll be prompted to create this directory.
+    If declined, the script will proceed without creating backups.
 
 ${BOLD}OUTPUT LEGEND:${NC}
     ${GREEN}pending${NC}     Has updates available
@@ -414,14 +424,88 @@ get_incoming_changelog() {
     cd "$PROJECT_ROOT"
 }
 
+# Get the project folder name for backup directory
+get_project_name() {
+    local project_name
+    # Try to get project name from git root directory name
+    project_name=$(basename "$PROJECT_ROOT")
+    echo "$project_name"
+}
+
+# Initialize backup directory structure
+init_backup_directory() {
+    local project_name
+    project_name=$(get_project_name)
+
+    # Create ~/.ssu if it doesn't exist
+    if [[ ! -d "$SSU_HOME" ]]; then
+        mkdir -p "$SSU_HOME" 2>/dev/null || {
+            print_status WARNING "Could not create $SSU_HOME directory"
+            BACKUPS_ENABLED=false
+            return 1
+        }
+    fi
+
+    # Check if project-specific backup directory exists
+    local project_backup_dir="$SSU_HOME/$project_name"
+
+    if [[ ! -d "$project_backup_dir" ]]; then
+        # In auto mode, don't prompt - just create the directory
+        if [[ "$MODE" == "auto" ]]; then
+            mkdir -p "$project_backup_dir" 2>/dev/null || {
+                print_status WARNING "Could not create backup directory: $project_backup_dir"
+                BACKUPS_ENABLED=false
+                return 1
+            }
+            print_status INFO "Created backup directory: $project_backup_dir"
+            BACKUP_DIR="$project_backup_dir"
+            BACKUPS_ENABLED=true
+        else
+            # Interactive mode - ask user
+            echo ""
+            print_status INFO "Backup directory does not exist: $project_backup_dir"
+            echo ""
+            read -rp "Create backup directory for this project? [Y/n]: " create_backup
+
+            case "$create_backup" in
+                n|N|no|No)
+                    print_status WARNING "Backups disabled for this session"
+                    BACKUPS_ENABLED=false
+                    return 1
+                    ;;
+                *)
+                    mkdir -p "$project_backup_dir" 2>/dev/null || {
+                        print_status ERROR "Could not create backup directory: $project_backup_dir"
+                        BACKUPS_ENABLED=false
+                        return 1
+                    }
+                    print_status SUCCESS "Created backup directory: $project_backup_dir"
+                    BACKUP_DIR="$project_backup_dir"
+                    BACKUPS_ENABLED=true
+                    ;;
+            esac
+        fi
+    else
+        BACKUP_DIR="$project_backup_dir"
+        BACKUPS_ENABLED=true
+    fi
+
+    return 0
+}
+
 # =============================================================================
 # BACKUP AND ROLLBACK
 # =============================================================================
 
 create_backup() {
+    # Skip backup creation if disabled
+    if [[ "$BACKUPS_ENABLED" == false ]]; then
+        return 0
+    fi
+
     local timestamp
     timestamp="$(date '+%Y%m%d-%H%M%S')"
-    local backup_file="$PROJECT_ROOT/${BACKUP_PREFIX}-${timestamp}.json"
+    local backup_file="$BACKUP_DIR/${BACKUP_PREFIX}-${timestamp}.json"
 
     echo "{" > "$backup_file"
     echo '  "timestamp": "'"$(date -Iseconds)"'",' >> "$backup_file"
@@ -851,9 +935,14 @@ process_updates() {
     local backup_file
 
     if [[ "$DRY_RUN" == false ]]; then
-        backup_file=$(create_backup)
-        print_status INFO "Backup created: $backup_file"
-        echo ""
+        if [[ "$BACKUPS_ENABLED" == true ]]; then
+            backup_file=$(create_backup)
+            print_status INFO "Backup created: $backup_file"
+            echo ""
+        else
+            print_status WARNING "Backups disabled - proceeding without backup"
+            echo ""
+        fi
     fi
 
     for path in $(get_submodule_paths | sort); do
@@ -969,6 +1058,11 @@ main() {
     if [[ ! -f ".gitmodules" ]]; then
         print_status ERROR "No .gitmodules found. Are you in the project root?"
         exit 1
+    fi
+
+    # Initialize backup directory (unless in status-only mode)
+    if [[ "$STATUS_ONLY" == false ]]; then
+        init_backup_directory
     fi
 
     # Scan all submodules
