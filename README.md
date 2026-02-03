@@ -31,7 +31,7 @@ An intelligent git submodule updater with smart branch detection, interactive wo
 Clone the repository and run the installer:
 
 ```bash
-git clone https://github.com/yourusername/ssu.git
+git clone https://github.com/pxpxltd/ssu.git
 cd ssu
 ./install.sh
 ```
@@ -47,7 +47,7 @@ If you prefer manual installation:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ssu.git /opt/ssu
+git clone https://github.com/pxpxltd/ssu.git /opt/ssu
 
 # Create a symlink in your PATH
 sudo ln -s /opt/ssu/ssu /usr/local/bin/ssu
