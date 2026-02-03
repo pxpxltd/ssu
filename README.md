@@ -2,7 +2,7 @@
 
 An intelligent git submodule updater with smart branch detection, interactive workflows, and robust conflict handling.
 
-[![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://github.com/yourusername/ssu)
+[![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://github.com/pxpxltd/ssu)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Bash](https://img.shields.io/badge/bash-3.2%2B-orange.svg)](https://www.gnu.org/software/bash/)
 
@@ -30,7 +30,7 @@ An intelligent git submodule updater with smart branch detection, interactive wo
 Clone the repository and run the installer:
 
 ```bash
-git clone https://github.com/yourusername/ssu.git
+git clone https://github.com/pxpxltd/ssu.git
 cd ssu
 ./install.sh
 ```
@@ -46,7 +46,7 @@ If you prefer manual installation:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ssu.git /opt/ssu
+git clone https://github.com/pxpxltd/ssu.git /opt/ssu
 
 # Create a symlink in your PATH
 sudo ln -s /opt/ssu/ssu /usr/local/bin/ssu
