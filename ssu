@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # smart-submodule-update.sh - Intelligent git submodule updater
-# Version 1.1.0
+# Version 1.1.1
 #
 # Features:
 #   - Smart branch detection (develop → master → main → remote default)
@@ -542,6 +542,22 @@ detect_best_branch() {
     fi
 
     cd "$PROJECT_ROOT/$path"
+
+    # Get current branch
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+
+    # If on a feature branch (not in priority list, not detached), check if it has a remote
+    if [[ "$current_branch" != "develop" ]] && [[ "$current_branch" != "master" ]] && \
+       [[ "$current_branch" != "main" ]] && [[ "$current_branch" != "HEAD" ]] && \
+       [[ "$current_branch" != "detached" ]]; then
+        # Check if remote branch exists for current feature branch
+        if git show-ref --verify --quiet "refs/remotes/origin/$current_branch"; then
+            echo "$current_branch"
+            cd "$PROJECT_ROOT"
+            return
+        fi
+    fi
 
     # Get remote branches from local refs (no network - uses cached refs from fetch)
     local remote_branches

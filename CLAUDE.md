@@ -61,15 +61,19 @@ Access via helper functions:
 
 **When modifying:** Never use Bash 4.0+ features (associative arrays, `[[`, `&>`, etc.)
 
-### Smart Branch Detection Algorithm (lines 301-340)
+### Smart Branch Detection Algorithm (lines 533-574)
 
 1. Check for `--branch` CLI override (highest priority)
-2. Try branches in priority order: `["develop", "master", "main"]`
-3. Uses `git branch -r` (cached from fetch) - no network calls
-4. Fallback to `origin/HEAD` symbolic ref
-5. Final fallback: first available remote branch or "master"
+2. **Check if on a feature branch** (not develop/master/main) - if yes and remote exists, use current branch
+3. Try branches in priority order: `["develop", "master", "main"]`
+4. Uses `git branch -r` (cached from fetch) - no network calls
+5. Fallback to `origin/HEAD` symbolic ref
+6. Final fallback: first available remote branch or "master"
 
-**Key insight:** Branch detection happens AFTER parallel fetch, so all remote refs are locally cached.
+**Key insights:**
+- Branch detection happens AFTER parallel fetch, so all remote refs are locally cached
+- Feature branches are preserved - submodules on feature branches will pull from their own remote branch, not switch to develop/master
+- Only falls back to priority branches if current branch has no remote tracking branch
 
 ### Conflict Handling Strategy (lines 631-659)
 
@@ -419,14 +423,15 @@ log "ERROR" "Something failed"
 
 ## Version History
 
-Version information in script header (line 4). Current: 1.1.0
+Version information in script header (line 4). Current: 1.1.1
 
 **Recent changes (from git log):**
 - v1.0.3: Better detection of non-committed changes
 - v1.0.4: Local .ssu folder with backups
 - v1.0.5: Store logs in home folder
 - v1.0.6: Add push functionality for ahead submodules
-- v1.1.0: TUI interactive selector + root repository display (Current version)
+- v1.1.0: TUI interactive selector + root repository display
+- v1.1.1: Fix feature branch switching bug - respects current branch (Current version)
 
 When incrementing version:
 1. Update line 4 in `ssu`

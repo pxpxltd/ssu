@@ -2,7 +2,7 @@
 
 An intelligent git submodule updater with smart branch detection, interactive workflows, and robust conflict handling.
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/yourusername/ssu)
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/yourusername/ssu)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Bash](https://img.shields.io/badge/bash-3.2%2B-orange.svg)](https://www.gnu.org/software/bash/)
 
