@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 2 - Git Layer (Plan 1 of 3 complete)
+**Current focus:** Phase 2 - Git Layer (Plan 2 of 3 complete)
 
 ## Current Position
 
 Phase: 2 of 6 (Git Layer)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-09 -- Completed 02-01-PLAN.md
+Last activity: 2026-02-09 -- Completed 02-02-PLAN.md
 
-Progress: [###_______________] 17% (3/18 plans)
+Progress: [####______________] 22% (4/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 3.2min
-- Total execution time: 10min
+- Total plans completed: 4
+- Average duration: 3min
+- Total execution time: 12min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 2/2 | 7min | 3.5min |
-| 02-git-layer | 1/3 | 3min | 3min |
+| 02-git-layer | 2/3 | 5min | 2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 3min, 3min
-- Trend: stable
+- Last 5 plans: 4min, 3min, 3min, 2min
+- Trend: stable/improving
 
 *Updated after each plan completion*
 
@@ -55,6 +55,9 @@ Recent decisions affecting current work:
 - [02-01]: 19 methods on GitService -- one per semantic operation, not per raw command
 - [02-01]: RemoteBranch has no Stderr (data type, not operation result)
 - [02-01]: IsSubmoduleInitialized has no context param (local filesystem check)
+- [02-02]: DetectBestBranch is a standalone function, not a method on any struct
+- [02-02]: Remote errors degrade gracefully (non-fatal) at every priority level
+- [02-02]: Priority branch matching checks ALL remotes, not just DefaultRemote
 
 ### Pending Todos
 
@@ -67,5 +70,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 02-01-PLAN.md
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
