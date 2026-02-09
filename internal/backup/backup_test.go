@@ -442,6 +442,120 @@ func TestReadBashEraFormat(t *testing.T) {
 	}
 }
 
+// ---------- Rollback tests ----------
+
+func TestRollbackDryRun(t *testing.T) {
+	dir := t.TempDir()
+	backupDir := filepath.Join(dir, "backups")
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a backup to rollback to
+	subs := map[string]SubmoduleState{
+		"plugins/auth": {SHA: "abc123", Branch: "develop"},
+		"plugins/blog": {SHA: "def456", Branch: "main"},
+	}
+	filename, err := Create(backupDir, subs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Rollback(
+		RollbackOpts{
+			BackupPath:  filepath.Join(backupDir, filename),
+			ProjectRoot: dir,
+			BackupDir:   backupDir,
+			DryRun:      true,
+		},
+		nil, nil, nil,
+	)
+	if err != nil {
+		t.Fatalf("Rollback dry run: %v", err)
+	}
+
+	if len(result.Submodules) != 2 {
+		t.Errorf("expected 2 submodules, got %d", len(result.Submodules))
+	}
+	if result.SafetyBackupFile != "" {
+		t.Errorf("expected no safety backup in dry run, got %q", result.SafetyBackupFile)
+	}
+}
+
+func TestRollbackWithCallbacks(t *testing.T) {
+	dir := t.TempDir()
+	backupDir := filepath.Join(dir, "backups")
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	subs := map[string]SubmoduleState{
+		"plugins/auth": {SHA: "abc123", Branch: "develop"},
+	}
+	filename, err := Create(backupDir, subs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var checkedOutBranch, resetSHA string
+
+	getCurrent := func(root string, paths []string) (map[string]SubmoduleState, error) {
+		return map[string]SubmoduleState{
+			"plugins/auth": {SHA: "old111", Branch: "develop"},
+		}, nil
+	}
+	checkout := func(dir, branch string) error {
+		checkedOutBranch = branch
+		return nil
+	}
+	resetHard := func(dir, sha string) error {
+		resetSHA = sha
+		return nil
+	}
+
+	result, err := Rollback(
+		RollbackOpts{
+			BackupPath:  filepath.Join(backupDir, filename),
+			ProjectRoot: dir,
+			BackupDir:   backupDir,
+		},
+		getCurrent, checkout, resetHard,
+	)
+	if err != nil {
+		t.Fatalf("Rollback: %v", err)
+	}
+
+	if result.RestoredCount != 1 {
+		t.Errorf("RestoredCount = %d, want 1", result.RestoredCount)
+	}
+	if checkedOutBranch != "develop" {
+		t.Errorf("checked out branch = %q, want develop", checkedOutBranch)
+	}
+	if resetSHA != "abc123" {
+		t.Errorf("reset SHA = %q, want abc123", resetSHA)
+	}
+	if result.SafetyBackupFile == "" {
+		t.Error("expected safety backup to be created")
+	}
+}
+
+func TestRollbackEmptyBackup(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "empty.json")
+	data := `{"version": 2, "timestamp": "2026-01-01T00:00:00Z", "submodules": {}}`
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Rollback(
+		RollbackOpts{BackupPath: path, ProjectRoot: dir},
+		nil, nil, nil,
+	)
+	if err == nil {
+		t.Fatal("expected error for empty backup")
+	}
+}
+
 // ---------- ProjectName tests ----------
 
 func TestProjectName(t *testing.T) {
