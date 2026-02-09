@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 4 - Config + Safety (next phase to plan)
+**Current focus:** Phase 4 - Config + Safety (in progress)
 
 ## Current Position
 
-Phase: 3 of 6 (Engine) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-02-09 -- Completed Phase 3 (all 3 plans)
+Phase: 4 of 6 (Config + Safety)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-09 -- Completed 04-01-PLAN.md
 
-Progress: [########__________] 44% (8/18 plans)
+Progress: [#########_________] 50% (9/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 3.1min
-- Total execution time: 25min
+- Total plans completed: 9
+- Average duration: 3.3min
+- Total execution time: 30min
 
 **By Phase:**
 
@@ -30,9 +30,10 @@ Progress: [########__________] 44% (8/18 plans)
 | 01-foundation | 2/2 | 7min | 3.5min |
 | 02-git-layer | 3/3 | 9min | 3min |
 | 03-engine | 3/3 | 9min | 3min |
+| 04-config-safety | 1/3 | 5min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 2min, 4min, 4min, 3min, 2min
+- Last 5 plans: 4min, 4min, 3min, 2min, 5min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -71,6 +72,14 @@ Recent decisions affecting current work:
 - [03-02]: ConflictHint contains relative path (info.Path) not absolute path
 - [03-03]: Push delegates tracking branch detection to GitService.Push (no logic duplication)
 - [03-03]: Detached HEAD returns PushAction with no error (skip, not failure)
+- [04-01]: Viper instance per Load() call (not global) for testability
+- [04-01]: Config errors are warnings not fatal -- version/completion/help work without git repo
+- [04-01]: cmd.Flags().Changed() pattern for flag overrides (avoids Viper BindPFlags pitfall)
+- [04-01]: Legacy PARALLEL_JOBS env var via explicit os.Getenv (SSU_ prefix always wins)
+
+### Roadmap Evolution
+
+- Phase 5.1 inserted after Phase 5: Claude Code Integration (URGENT) — slash commands + CLAUDE.md snippet for AI-assisted submodule management
 
 ### Pending Todos
 
@@ -83,5 +92,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed Phase 3 (Engine)
+Stopped at: Completed 04-01-PLAN.md (Config loading)
 Resume file: None
