@@ -24,31 +24,9 @@ func TestRootCmdHelp(t *testing.T) {
 	}
 }
 
-func TestRootCmdSubcommandStubs(t *testing.T) {
-	// Commands still in stub form (real implementations come in Phase 5)
-	stubs := []string{"status", "update", "push"}
-
-	for _, sub := range stubs {
-		t.Run(sub, func(t *testing.T) {
-			root := NewRootCmd("dev", "test", "now")
-			var buf bytes.Buffer
-			root.SetOut(&buf)
-			root.SetArgs([]string{sub})
-
-			if err := root.Execute(); err != nil {
-				t.Fatalf("unexpected error running %q: %v", sub, err)
-			}
-
-			if !strings.Contains(buf.String(), "not implemented yet") {
-				t.Errorf("%s output missing 'not implemented yet'\ngot: %s", sub, buf.String())
-			}
-		})
-	}
-}
-
 func TestRootCmdImplementedSubcommands(t *testing.T) {
-	// Commands with real implementations (Phase 4)
-	cmds := []string{"backup", "rollback"}
+	// All commands with real implementations
+	cmds := []string{"status", "update", "push", "backup", "rollback"}
 
 	for _, sub := range cmds {
 		t.Run(sub, func(t *testing.T) {
@@ -57,7 +35,7 @@ func TestRootCmdImplementedSubcommands(t *testing.T) {
 			root.SetOut(&buf)
 			root.SetArgs([]string{sub})
 
-			// Should run without error
+			// Should run without error (may produce output depending on git state)
 			if err := root.Execute(); err != nil {
 				t.Fatalf("unexpected error running %q: %v", sub, err)
 			}

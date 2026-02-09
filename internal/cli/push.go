@@ -259,5 +259,3 @@ func printPushResults(pr *output.Printer, result *engine.PushResult) {
 		}
 	}
 }
-
-// exitError is defined in exitcodes.go (same package).
