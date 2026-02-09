@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 5.1 of 6 (Claude Code Integration)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-09 -- Completed 05.1-01-PLAN.md
+Plan: 2 of 2 in current phase -- COMPLETE
+Status: Phase complete
+Last activity: 2026-02-09 -- Completed 05.1-02-PLAN.md
 
-Progress: [################__] 89% (16/18 plans)
+Progress: [##################] 94% (17/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: 3.6min
-- Total execution time: 63min
+- Total plans completed: 17
+- Average duration: 3.5min
+- Total execution time: 65min
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [################__] 89% (16/18 plans)
 | 03-engine | 3/3 | 9min | 3min |
 | 04-config-safety | 3/3 | 12min | 4min |
 | 05-commands-tui | 4/4 | 26min | 6.5min |
-| 05.1-claude-code | 1/2 | 2min | 2min |
+| 05.1-claude-code | 2/2 | 4min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 6min, 6min, 6min, 6min, 2min
-- Trend: fast (lightweight package, no deps)
+- Last 5 plans: 6min, 6min, 6min, 2min, 2min
+- Trend: fast (lightweight CLI wiring, no new deps)
 
 *Updated after each plan completion*
 
@@ -102,6 +102,7 @@ Recent decisions affecting current work:
 - [05-04]: init uses bufio.Scanner prompts, not bubbletea (simple sequential flow)
 - [05-04]: Interactive menu now has 7 items (exec added between push and rollback)
 - [05.1-01]: Standard Go testing (not testify) to match project conventions
+- [05.1-02]: Import alias claudepkg to avoid naming collision with cobra command variable
 
 ### Roadmap Evolution
 
@@ -118,5 +119,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05.1-01-PLAN.md (embedded commands + install logic)
+Stopped at: Completed 05.1-02-PLAN.md (CLI commands -- phase 5.1 complete)
 Resume file: None
