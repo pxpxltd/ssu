@@ -130,12 +130,11 @@ Plans:
   2. GitHub releases contain static binaries for linux/darwin on amd64/arm64
   3. `brew install <tap>/ssu` installs the latest release on macOS and Linux
   4. AUR package is available for Arch Linux users
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 06-01: cmd/ssu/main.go entry point, go install support, CGO_ENABLED=0 static builds
-- [ ] 06-02: goreleaser config, GitHub Actions release workflow, Homebrew tap
-- [ ] 06-03: AUR package, install script (curl-pipe-bash)
+- [ ] 06-01-PLAN.md — goreleaser config (builds, archives, checksums, changelog, Homebrew cask, AUR) and GitHub Actions release workflow
+- [ ] 06-02-PLAN.md — curl-pipe-bash install script with OS/arch detection, SHA256 verification, and auto-install
 
 ## Progress
 
@@ -150,4 +149,4 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 5.1 > 6
 | 4. Config + Safety | 3/3 | Complete | 2026-02-09 |
 | 5. Commands + TUI | 0/4 | Not started | - |
 | 5.1 Claude Code Integration | 0/2 | Planned | - |
-| 6. Distribution | 0/3 | Not started | - |
+| 6. Distribution | 0/2 | Not started | - |
