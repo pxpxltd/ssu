@@ -3,12 +3,15 @@ package cli
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/pxpxltd/ssu/internal/cli/output"
 	"github.com/pxpxltd/ssu/internal/config"
+	"github.com/pxpxltd/ssu/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -88,7 +91,33 @@ func loadConfig(cmd *cobra.Command) error {
 	ctx = config.WithAnnotated(ctx, ac)
 	cmd.SetContext(ctx)
 
+	// Initialize logger (skip for lightweight utility commands)
+	switch cmd.Name() {
+	case "version", "completion":
+		// No file logging for utility commands
+	default:
+		initLogger(cmd, cfg, projectRoot)
+	}
+
 	return nil
+}
+
+// initLogger sets up file logging. Failure is non-fatal: if the log directory
+// cannot be created, a warning is printed to stderr and the command continues.
+func initLogger(cmd *cobra.Command, cfg *config.Config, projectRoot string) {
+	projectName := filepath.Base(projectRoot)
+	logDir := logging.LogDir(projectName)
+
+	verbose, _ := cmd.Flags().GetBool("verbose")
+
+	logger, err := logging.InitLogger(logDir, verbose, cfg.Log.MaxSizeMB, cfg.Log.MaxBackups)
+	if err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: could not initialize logger: %v\n", err)
+		return
+	}
+
+	slog.SetDefault(logger)
+	slog.Info("SSU started", "project", projectName)
 }
 
 // detectProjectRoot returns the git repository root directory.
