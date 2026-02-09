@@ -75,18 +75,18 @@ Plans:
 **Goal**: Layered YAML configuration and reliable backup/rollback with structured logging
 **Depends on**: Phase 1 (can run parallel with Phase 3)
 **Requirements**: CFG-01, CFG-02, CFG-03, CFG-04, SAFE-01, SAFE-02, SAFE-03, SAFE-04, SAFE-05, SAFE-06
+**Plans:** 3 plans
 **Success Criteria** (what must be TRUE):
   1. Config loads from defaults < ~/.ssu/config.yaml < .ssu.yaml < env vars < CLI flags, with each layer overriding the previous
   2. Skip list, branch priority, and parallel jobs are configurable and respected by engine
   3. JSON backup is created atomically (write temp, rename) before any submodule modification, and rollback restores exact SHAs (compatible with bash-era backup format)
   4. `ssu backup list` shows available backups and `ssu backup clean --keep N` removes old ones
   5. Logs are written to ~/.ssu/<project>/logs/ with size/date-based rotation
-**Plans**: TBD
 
 Plans:
-- [ ] 04-01: Viper config loading with layering, config types, and defaults
-- [ ] 04-02: JSON backup with atomic writes, rollback restore, bash-format compatibility, backup management commands
-- [ ] 04-03: slog-based structured logging to ~/.ssu/<project>/logs/ with rotation, fail-fast mode
+- [ ] 04-01-PLAN.md — Viper config loading with layering, config types, defaults, source annotations, PersistentPreRunE, and ssu config show command
+- [ ] 04-02-PLAN.md — JSON backup with atomic writes, rollback with SHA+branch restore, bash-era compatibility, backup list/clean commands
+- [ ] 04-03-PLAN.md — slog-based structured logging with BracketHandler, lumberjack rotation, verbose stderr output
 
 ### Phase 5: Commands + TUI
 **Goal**: Fully functional interactive CLI where users can scan, select, update, push, and rollback submodules through a polished TUI
@@ -132,6 +132,6 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 6
 | 1. Foundation | 2/2 | Complete | 2026-02-09 |
 | 2. Git Layer | 3/3 | Complete | 2026-02-09 |
 | 3. Engine | 0/3 | Not started | - |
-| 4. Config + Safety | 0/3 | Not started | - |
+| 4. Config + Safety | 0/3 | Planned | - |
 | 5. Commands + TUI | 0/4 | Not started | - |
 | 6. Distribution | 0/3 | Not started | - |
