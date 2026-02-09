@@ -85,6 +85,10 @@ Recent decisions affecting current work:
 - [04-03]: Logger failure is non-fatal -- stderr warning, command continues
 - [04-03]: version/completion skip logger init (lightweight utility commands)
 - [04-03]: slog.SetDefault() for global access (no context threading needed)
+- [05-01]: Pin lipgloss v1.0.0 (not v1.1.0) to avoid Go version risk
+- [05-01]: Feature branch detection inline in status command (SubmoduleInfo has no IsFeature field)
+- [05-01]: Table width hardcoded to 120 columns (avoids x/term dep)
+- [05-01]: Mode branching pattern: --json flag checked in RunE, shared engine call
 - [05-02]: Confirmation is a state within SelectorModel, not a separate bubbletea model
 - [05-02]: Selections tracked by original index to persist across filter changes
 - [05-02]: ProgressModel.Result() returns interface{} to avoid circular tui/engine import
