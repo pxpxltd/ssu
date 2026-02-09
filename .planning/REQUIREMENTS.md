@@ -30,19 +30,19 @@
 - [x] **CLI-03**: Version command with build info (version, commit, date)
 - [x] **CLI-04**: Backwards compatibility hints (old `--status` -> suggests `ssu status`)
 - [x] **CLI-05**: Meaningful exit codes: 0=success, 1=error, 2=conflict
-- [ ] **CLI-06**: `--json` output on `ssu status` for scripting/CI
-- [ ] **CLI-07**: `ssu exec <command>` to run command across selected submodules
-- [ ] **CLI-08**: `ssu init` wizard for first-time config setup
+- [x] **CLI-06**: `--json` output on `ssu status` for scripting/CI
+- [x] **CLI-07**: `ssu exec <command>` to run command across selected submodules
+- [x] **CLI-08**: `ssu init` wizard for first-time config setup
 
 ### Interactive TUI
 
-- [ ] **TUI-01**: Multi-select with checkboxes (arrow/vim keys, space toggle, all/none, confirm/quit)
-- [ ] **TUI-02**: Colorized status table with root repo display
-- [ ] **TUI-03**: Auto/batch mode (`--auto` or `--all`) for CI/CD, no prompts
-- [ ] **TUI-04**: Dry-run preview showing what would change
-- [ ] **TUI-05**: Progress bar during parallel fetch (per-submodule status)
+- [x] **TUI-01**: Multi-select with checkboxes (arrow/vim keys, space toggle, all/none, confirm/quit)
+- [x] **TUI-02**: Colorized status table with root repo display
+- [x] **TUI-03**: Auto/batch mode (`--auto` or `--all`) for CI/CD, no prompts
+- [x] **TUI-04**: Dry-run preview showing what would change
+- [x] **TUI-05**: Progress bar during parallel fetch (per-submodule status)
 - [x] **TUI-06**: NO_COLOR support and TTY detection
-- [ ] **TUI-07**: Graceful Ctrl+C handling (clean terminal state, show partial results)
+- [x] **TUI-07**: Graceful Ctrl+C handling (clean terminal state, show partial results)
 
 ### Configuration
 
@@ -63,7 +63,7 @@
 ### Push Operations
 
 - [x] **PUSH-01**: Detect ahead submodules (unpushed commits)
-- [ ] **PUSH-02**: Interactive selection for push
+- [x] **PUSH-02**: Interactive selection for push
 - [x] **PUSH-03**: Automatic tracking branch setup (`git push -u origin <branch>`)
 - [x] **PUSH-04**: Detached HEAD detection and skip with warning
 
@@ -121,16 +121,16 @@
 | CLI-03 | Phase 1 | Complete |
 | CLI-04 | Phase 1 | Complete |
 | CLI-05 | Phase 1 | Complete |
-| CLI-06 | Phase 5 | Pending |
-| CLI-07 | Phase 5 | Pending |
-| CLI-08 | Phase 5 | Pending |
-| TUI-01 | Phase 5 | Pending |
-| TUI-02 | Phase 5 | Pending |
-| TUI-03 | Phase 5 | Pending |
-| TUI-04 | Phase 5 | Pending |
-| TUI-05 | Phase 5 | Pending |
+| CLI-06 | Phase 5 | Complete |
+| CLI-07 | Phase 5 | Complete |
+| CLI-08 | Phase 5 | Complete |
+| TUI-01 | Phase 5 | Complete |
+| TUI-02 | Phase 5 | Complete |
+| TUI-03 | Phase 5 | Complete |
+| TUI-04 | Phase 5 | Complete |
+| TUI-05 | Phase 5 | Complete |
 | TUI-06 | Phase 1 | Complete |
-| TUI-07 | Phase 5 | Pending |
+| TUI-07 | Phase 5 | Complete |
 | CFG-01 | Phase 4 | Complete |
 | CFG-02 | Phase 4 | Complete |
 | CFG-03 | Phase 4 | Complete |
@@ -142,7 +142,7 @@
 | SAFE-05 | Phase 4 | Complete |
 | SAFE-06 | Phase 4 | Complete |
 | PUSH-01 | Phase 3 | Complete |
-| PUSH-02 | Phase 5 | Pending |
+| PUSH-02 | Phase 5 | Complete |
 | PUSH-03 | Phase 2 | Complete |
 | PUSH-04 | Phase 3 | Complete |
 | DIST-01 | Phase 6 | Pending |
@@ -159,4 +159,4 @@
 
 ---
 *Requirements defined: 2026-02-09*
-*Last updated: 2026-02-09 after Phase 4 completion*
+*Last updated: 2026-02-09 after Phase 5 completion*

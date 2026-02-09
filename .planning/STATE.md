@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 5 - Commands + TUI (in progress)
+**Current focus:** Phase 5.1 - Claude Code Integration (next phase to plan)
 
 ## Current Position
 
-Phase: 5 of 6 (Commands + TUI)
-Plan: 4 of N in current phase
-Status: In progress
-Last activity: 2026-02-09 -- Completed 05-04-PLAN.md (Push, Exec, Init Commands)
+Phase: 5 of 6 (Commands + TUI) -- COMPLETE
+Plan: 4 of 4 in current phase
+Status: Complete
+Last activity: 2026-02-09 -- Completed Phase 5 (all 4 plans, verified)
 
 Progress: [###############___] 83% (15/18 plans)
 
@@ -31,7 +31,7 @@ Progress: [###############___] 83% (15/18 plans)
 | 02-git-layer | 3/3 | 9min | 3min |
 | 03-engine | 3/3 | 9min | 3min |
 | 04-config-safety | 3/3 | 12min | 4min |
-| 05-commands-tui | 4/N | 24min | 6min |
+| 05-commands-tui | 4/4 | 26min | 6.5min |
 
 **Recent Trend:**
 - Last 5 plans: 5min, 6min, 6min, 6min, 6min
@@ -116,5 +116,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05-04-PLAN.md (Push, Exec, Init Commands)
+Stopped at: Completed Phase 5 (Commands + TUI) -- verified, all 4 plans
 Resume file: None
