@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 2 - Git Layer (Plan 2 of 3 complete)
+**Current focus:** Phase 2 - Git Layer (Plan 3 of 3 complete)
 
 ## Current Position
 
 Phase: 2 of 6 (Git Layer)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-09 -- Completed 02-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-09 -- Completed 02-03-PLAN.md
 
-Progress: [####______________] 22% (4/18 plans)
+Progress: [#####_____________] 28% (5/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 3min
-- Total execution time: 12min
+- Total plans completed: 5
+- Average duration: 3.2min
+- Total execution time: 16min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 2/2 | 7min | 3.5min |
-| 02-git-layer | 2/3 | 5min | 2.5min |
+| 02-git-layer | 3/3 | 9min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 3min, 3min, 2min
-- Trend: stable/improving
+- Last 5 plans: 4min, 3min, 3min, 2min, 4min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -58,6 +58,9 @@ Recent decisions affecting current work:
 - [02-02]: DetectBestBranch is a standalone function, not a method on any struct
 - [02-02]: Remote errors degrade gracefully (non-fatal) at every priority level
 - [02-02]: Priority branch matching checks ALL remotes, not just DefaultRemote
+- [02-03]: Merge conflict detection checks both stdout and stderr (git writes CONFLICT to stdout)
+- [02-03]: CommitsBehind/CommitsAhead return 0 on error (matching bash behavior)
+- [02-03]: Push auto-detects missing tracking branch and uses -u flag
 
 ### Pending Todos
 
@@ -70,5 +73,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 02-02-PLAN.md
+Stopped at: Completed 02-03-PLAN.md (Phase 2 complete)
 Resume file: None
