@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Engine** - Scanning, status analysis, parallel fetch, and conflict handling orchestration
 - [x] **Phase 4: Config + Safety** - YAML configuration, backup/rollback, and structured logging
 - [x] **Phase 5: Commands + TUI** - User-facing commands wired to bubbletea interactive selector
-- [ ] **Phase 5.1: Claude Code Integration** - Slash commands and CLAUDE.md snippet for AI-assisted submodule management (INSERTED)
+- [x] **Phase 5.1: Claude Code Integration** - Slash commands and CLAUDE.md snippet for AI-assisted submodule management (INSERTED)
 - [ ] **Phase 6: Distribution** - Cross-platform builds, package managers, and install script
 
 ## Phase Details
@@ -118,8 +118,8 @@ Plans:
   4. Commands handle both interactive and `--auto` modes correctly in Claude Code's execution context
 
 Plans:
-- [ ] 05.1-01-PLAN.md — Embedded command markdown files, CLAUDE.md snippet, embed.go, install logic with tests
-- [ ] 05.1-02-PLAN.md — Cobra claude command with install and snippet subcommands, root.go registration
+- [x] 05.1-01-PLAN.md — Embedded command markdown files, CLAUDE.md snippet, embed.go, install logic with tests
+- [x] 05.1-02-PLAN.md — Cobra claude command with install and snippet subcommands, root.go registration
 
 ### Phase 6: Distribution
 **Goal**: Users can install SSU via their preferred method on any supported platform
@@ -148,5 +148,5 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 5.1 > 6
 | 3. Engine | 3/3 | Complete | 2026-02-09 |
 | 4. Config + Safety | 3/3 | Complete | 2026-02-09 |
 | 5. Commands + TUI | 4/4 | Complete | 2026-02-09 |
-| 5.1 Claude Code Integration | 0/2 | Planned | - |
+| 5.1 Claude Code Integration | 2/2 | Complete | 2026-02-09 |
 | 6. Distribution | 0/2 | Not started | - |
