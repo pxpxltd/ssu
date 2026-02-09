@@ -8,12 +8,12 @@
 ### Core Git Operations
 
 - [ ] **CORE-01**: Parallel fetch of all submodule remotes with configurable concurrency
-- [ ] **CORE-02**: Smart branch detection (develop > master > main > remote HEAD > fallback)
-- [ ] **CORE-03**: Feature branch preservation (submodules on feature branches stay on them)
+- [x] **CORE-02**: Smart branch detection (develop > master > main > remote HEAD > fallback)
+- [x] **CORE-03**: Feature branch preservation (submodules on feature branches stay on them)
 - [ ] **CORE-04**: Status detection for each submodule (pending, current, modified, ahead, conflict, missing, skipped)
 - [ ] **CORE-05**: Changelog preview showing incoming commits per submodule
-- [ ] **CORE-06**: Configurable fetch timeout per submodule (kill hung fetch)
-- [ ] **CORE-07**: Multiple remote support (don't hardcode "origin")
+- [x] **CORE-06**: Configurable fetch timeout per submodule (kill hung fetch)
+- [x] **CORE-07**: Multiple remote support (don't hardcode "origin")
 - [ ] **CORE-08**: Root repository status display (display-only, excluded from operations)
 
 ### Smart Conflict Handling
@@ -64,7 +64,7 @@
 
 - [ ] **PUSH-01**: Detect ahead submodules (unpushed commits)
 - [ ] **PUSH-02**: Interactive selection for push
-- [ ] **PUSH-03**: Automatic tracking branch setup (`git push -u origin <branch>`)
+- [x] **PUSH-03**: Automatic tracking branch setup (`git push -u origin <branch>`)
 - [ ] **PUSH-04**: Detached HEAD detection and skip with warning
 
 ### Distribution
@@ -105,12 +105,12 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CORE-01 | Phase 3 | Pending |
-| CORE-02 | Phase 2 | Pending |
-| CORE-03 | Phase 2 | Pending |
+| CORE-02 | Phase 2 | Complete |
+| CORE-03 | Phase 2 | Complete |
 | CORE-04 | Phase 3 | Pending |
 | CORE-05 | Phase 3 | Pending |
-| CORE-06 | Phase 2 | Pending |
-| CORE-07 | Phase 2 | Pending |
+| CORE-06 | Phase 2 | Complete |
+| CORE-07 | Phase 2 | Complete |
 | CORE-08 | Phase 3 | Pending |
 | CONF-01 | Phase 3 | Pending |
 | CONF-02 | Phase 3 | Pending |
@@ -143,7 +143,7 @@
 | SAFE-06 | Phase 4 | Pending |
 | PUSH-01 | Phase 3 | Pending |
 | PUSH-02 | Phase 5 | Pending |
-| PUSH-03 | Phase 2 | Pending |
+| PUSH-03 | Phase 2 | Complete |
 | PUSH-04 | Phase 3 | Pending |
 | DIST-01 | Phase 6 | Pending |
 | DIST-02 | Phase 6 | Pending |

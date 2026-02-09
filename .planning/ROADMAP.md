@@ -13,7 +13,7 @@ Rewrite SSU from a 950-line bash script into a structured Go CLI with interactiv
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Go project structure, cobra CLI skeleton, and cross-cutting concerns
-- [ ] **Phase 2: Git Layer** - GitService interface and os/exec implementation with smart branch detection
+- [x] **Phase 2: Git Layer** - GitService interface and os/exec implementation with smart branch detection
 - [ ] **Phase 3: Engine** - Scanning, status analysis, parallel fetch, and conflict handling orchestration
 - [ ] **Phase 4: Config + Safety** - YAML configuration, backup/rollback, and structured logging
 - [ ] **Phase 5: Commands + TUI** - User-facing commands wired to bubbletea interactive selector
@@ -51,8 +51,8 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — GitService interface, result/error types, Status enum, and MockGitService with compile-time check
-- [ ] 02-02-PLAN.md — Smart branch detection algorithm (DetectBestBranch) with 14 table-driven test cases using mock
-- [ ] 02-03-PLAN.md — ExecGit production implementation (os/exec, timeouts, stderr capture) with integration tests
+- [x] 02-02-PLAN.md — Smart branch detection algorithm (DetectBestBranch) with 14 table-driven test cases using mock
+- [x] 02-03-PLAN.md — ExecGit production implementation (os/exec, timeouts, stderr capture) with integration tests
 
 ### Phase 3: Engine
 **Goal**: The core orchestrator that scans submodules in parallel, detects status, handles conflicts, and coordinates update/push workflows
@@ -130,7 +130,7 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-02-09 |
-| 2. Git Layer | 1/3 | In progress | - |
+| 2. Git Layer | 3/3 | Complete | 2026-02-09 |
 | 3. Engine | 0/3 | Not started | - |
 | 4. Config + Safety | 0/3 | Not started | - |
 | 5. Commands + TUI | 0/4 | Not started | - |
