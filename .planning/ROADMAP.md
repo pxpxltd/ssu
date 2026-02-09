@@ -58,18 +58,18 @@ Plans:
 **Goal**: The core orchestrator that scans submodules in parallel, detects status, handles conflicts, and coordinates update/push workflows
 **Depends on**: Phase 2
 **Requirements**: CORE-01, CORE-04, CORE-05, CORE-08, CONF-01, CONF-02, CONF-03, CONF-04, PUSH-01, PUSH-04
+**Plans:** 3 plans
 **Success Criteria** (what must be TRUE):
   1. Engine scans all submodules in parallel with bounded concurrency and returns status for each (pending, current, modified, ahead, conflict, missing, skipped)
   2. Engine detects root repository status and includes it as display-only (excluded from operations)
   3. Engine shows changelog preview of incoming commits per submodule
   4. Dirty submodules get per-submodule handling: stash+merge, skip, or force -- with actionable conflict resolution hints on failure
   5. Engine detects ahead submodules with unpushed commits and skips detached HEAD submodules with a warning
-**Plans**: TBD
 
 Plans:
-- [ ] 03-01: Engine struct, parallel scanner with errgroup, submodule enumeration, and status detection
-- [ ] 03-02: Conflict handling (stash/retry/reapply), changelog preview, root repo status
-- [ ] 03-03: Push workflow orchestration, ahead detection, detached HEAD handling
+- [ ] 03-01-PLAN.md — Engine types, progress callback, parallel scanner with errgroup, submodule enumeration, and status detection
+- [ ] 03-02-PLAN.md — Update workflow with 3-step conflict resolution (stash/retry/reapply), actionable hints
+- [ ] 03-03-PLAN.md — Push workflow orchestration, ahead detection, detached HEAD handling
 
 ### Phase 4: Config + Safety
 **Goal**: Layered YAML configuration and reliable backup/rollback with structured logging
