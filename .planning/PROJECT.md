@@ -50,7 +50,7 @@ These capabilities exist in the bash version and are proven valuable:
 - GUI/web interface — CLI tool, terminal is the interface
 - Non-git VCS support — git-only tool
 - Submodule creation/removal — only manages existing submodules
-- Windows native support — Linux/macOS only (WSL may work incidentally)
+- Windows native support — Go binaries are provided but no Windows-specific testing or features
 
 ## Context
 
