@@ -25,17 +25,17 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal**: A runnable `ssu` binary with subcommand routing, version info, and correct terminal behavior
 **Depends on**: Nothing (first phase)
 **Requirements**: CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, TUI-06
+**Plans:** 2 plans
 **Success Criteria** (what must be TRUE):
   1. Running `ssu` displays help with available subcommands (status, update, push, rollback)
   2. Running `ssu version` prints version, commit hash, and build date
   3. Running `ssu --status` prints a hint suggesting `ssu status` instead
   4. Tab completion works in bash, zsh, and fish after running the completion setup command
   5. Output respects NO_COLOR env var and disables colors when stdout is not a TTY
-**Plans**: TBD
 
 Plans:
-- [ ] 01-01: Go module init, project layout, and cobra root command with subcommand stubs
-- [ ] 01-02: Version injection, shell completions, backwards compat hints, exit codes, NO_COLOR/TTY detection
+- [ ] 01-01-PLAN.md — Go module init, project layout, output utilities, and cobra root command with subcommand stubs
+- [ ] 01-02-PLAN.md — Version command, shell completions, backwards compat hints, exit codes, and test suite
 
 ### Phase 2: Git Layer
 **Goal**: A testable git abstraction that handles all git operations SSU needs, with context timeouts and correct branch detection
