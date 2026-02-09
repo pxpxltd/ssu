@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 6 - Distribution -- In progress
+**Current focus:** Phase 6 - Distribution -- COMPLETE. All phases complete.
 
 ## Current Position
 
 Phase: 6 of 6 (Distribution)
-Plan: 2 of 2 in current phase -- In progress
-Status: In progress
-Last activity: 2026-02-09 -- Completed 06-02-PLAN.md
+Plan: 2 of 2 in current phase -- COMPLETE
+Status: All phases complete
+Last activity: 2026-02-09 -- Completed 06-01-PLAN.md (release pipeline)
 
-Progress: [###################] 100% (18/18 plans)
+Progress: [####################] 100% (19/19 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
-- Average duration: 3.5min
-- Total execution time: 69min
+- Total plans completed: 19
+- Average duration: 4min
+- Total execution time: 79min
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [###################] 100% (18/18 plans)
 | 04-config-safety | 3/3 | 12min | 4min |
 | 05-commands-tui | 4/4 | 26min | 6.5min |
 | 05.1-claude-code | 2/2 | 4min | 2min |
-| 06-distribution | 1/2 | 4min | 4min |
+| 06-distribution | 2/2 | 14min | 7min |
 
 **Recent Trend:**
-- Last 5 plans: 6min, 6min, 2min, 2min, 4min
-- Trend: fast (shell scripting, no Go compilation)
+- Last 5 plans: 2min, 2min, 4min, 10min
+- Trend: fast execution throughout
 
 *Updated after each plan completion*
 
@@ -104,6 +104,10 @@ Recent decisions affecting current work:
 - [05-04]: Interactive menu now has 7 items (exec added between push and rollback)
 - [05.1-01]: Standard Go testing (not testify) to match project conventions
 - [05.1-02]: Import alias claudepkg to avoid naming collision with cobra command variable
+- [06-01]: homebrew_casks (not deprecated brews) for Homebrew distribution
+- [06-01]: skip_upload: auto on both Homebrew and AUR to prevent pre-release publishing
+- [06-01]: prerelease: auto for automatic RC/beta/alpha detection from tag names
+- [06-01]: CGO_ENABLED=0 for fully static binaries across all platforms
 - [06-02]: ARCHIVE_FILENAME global variable for POSIX-compatible return from download function
 - [06-02]: INSTALL_DIR env var override in addition to auto-detection
 - [06-02]: Version normalization: accept both v1.0.0 and 1.0.0 input
@@ -118,7 +122,7 @@ None.
 
 ### Blockers/Concerns
 
-None.
+None. All phases complete.
 
 ### Quick Tasks Completed
 
@@ -131,5 +135,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 06-02-PLAN.md (install script)
+Stopped at: Completed 06-01-PLAN.md (release pipeline) -- ALL PLANS COMPLETE
 Resume file: None
