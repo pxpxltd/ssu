@@ -11,17 +11,17 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 Phase: 4 of 6 (Config + Safety)
 Plan: 3 of 3 in current phase
-Status: Phase complete (04-02 parallel)
-Last activity: 2026-02-09 -- Completed 04-03-PLAN.md
+Status: Phase complete
+Last activity: 2026-02-09 -- Completed 04-02-PLAN.md (last remaining parallel plan)
 
-Progress: [###########_______] 61% (11/18 plans)
+Progress: [############______] 67% (12/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 3.2min
-- Total execution time: 35min
+- Total plans completed: 12
+- Average duration: 3.3min
+- Total execution time: 39min
 
 **By Phase:**
 
@@ -33,7 +33,7 @@ Progress: [###########_______] 61% (11/18 plans)
 | 04-config-safety | 3/3 | 10min | 3.3min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 2min, 5min, 2min, 3min
+- Last 5 plans: 2min, 5min, 2min, 3min, 4min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -76,6 +76,10 @@ Recent decisions affecting current work:
 - [04-01]: Config errors are warnings not fatal -- version/completion/help work without git repo
 - [04-01]: cmd.Flags().Changed() pattern for flag overrides (avoids Viper BindPFlags pitfall)
 - [04-01]: Legacy PARALLEL_JOBS env var via explicit os.Getenv (SSU_ prefix always wins)
+- [04-02]: Rollback uses injected function callbacks instead of importing git package directly
+- [04-02]: Bash-era backups are discovered but never auto-deleted by clean command
+- [04-02]: Go-era backup filenames have no dot prefix (backup-*.json vs .submodule-backup-*.json)
+- [04-02]: Safety backup created automatically before any rollback restore operation
 - [04-03]: BracketHandler uses slog level strings as-is (WARN not WARNING)
 - [04-03]: Logger failure is non-fatal -- stderr warning, command continues
 - [04-03]: version/completion skip logger init (lightweight utility commands)
@@ -96,5 +100,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 04-03-PLAN.md (Logging)
+Stopped at: Completed 04-02-PLAN.md (Backup/Rollback -- Phase 4 fully complete)
 Resume file: None
