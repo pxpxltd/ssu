@@ -325,9 +325,10 @@ func (g *ExecGit) Checkout(ctx context.Context, dir, branch string) (CheckoutRes
 }
 
 func (g *ExecGit) Merge(ctx context.Context, dir, ref string) (MergeResult, error) {
-	_, stderr, err := g.run(ctx, dir, g.Timeouts.Merge, "merge", ref)
+	stdout, stderr, err := g.run(ctx, dir, g.Timeouts.Merge, "merge", ref)
 	if err != nil {
-		if strings.Contains(stderr, "CONFLICT") {
+		// Git writes CONFLICT markers to stdout, not stderr.
+		if strings.Contains(stdout, "CONFLICT") || strings.Contains(stderr, "CONFLICT") {
 			return MergeResult{Conflict: true, Stderr: stderr}, err
 		}
 		return MergeResult{Stderr: stderr}, err
