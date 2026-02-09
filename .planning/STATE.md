@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 5 of 6 (Commands + TUI)
-Plan: 3 of N in current phase
+Plan: 4 of N in current phase
 Status: In progress
-Last activity: 2026-02-09 -- Completed 05-03-PLAN.md (Update Command)
+Last activity: 2026-02-09 -- Completed 05-04-PLAN.md (Push, Exec, Init Commands)
 
-Progress: [##############____] 78% (14/18 plans)
+Progress: [###############___] 83% (15/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 3.6min
-- Total execution time: 55min
+- Total plans completed: 15
+- Average duration: 3.7min
+- Total execution time: 61min
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: [##############____] 78% (14/18 plans)
 | 02-git-layer | 3/3 | 9min | 3min |
 | 03-engine | 3/3 | 9min | 3min |
 | 04-config-safety | 3/3 | 12min | 4min |
-| 05-commands-tui | 3/N | 18min | 6min |
+| 05-commands-tui | 4/N | 24min | 6min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 5min, 6min, 6min, 6min
+- Last 5 plans: 5min, 6min, 6min, 6min, 6min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -97,6 +97,9 @@ Recent decisions affecting current work:
 - [05-03]: resolveRef uses os/exec directly for rev-parse (ExecGit.run is unexported)
 - [05-03]: Non-TTY falls back to auto mode (same code path as --auto flag)
 - [05-03]: Dynamic total in ProgressModel (starts at 0, updated via FetchProgressMsg.Total)
+- [05-04]: exec runs sequentially (not parallel) for readable output ordering
+- [05-04]: init uses bufio.Scanner prompts, not bubbletea (simple sequential flow)
+- [05-04]: Interactive menu now has 7 items (exec added between push and rollback)
 
 ### Roadmap Evolution
 
@@ -113,5 +116,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05-03-PLAN.md (Update Command)
+Stopped at: Completed 05-04-PLAN.md (Push, Exec, Init Commands)
 Resume file: None
