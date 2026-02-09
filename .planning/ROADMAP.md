@@ -12,7 +12,7 @@ Rewrite SSU from a 950-line bash script into a structured Go CLI with interactiv
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Go project structure, cobra CLI skeleton, and cross-cutting concerns
+- [x] **Phase 1: Foundation** - Go project structure, cobra CLI skeleton, and cross-cutting concerns
 - [ ] **Phase 2: Git Layer** - GitService interface and os/exec implementation with smart branch detection
 - [ ] **Phase 3: Engine** - Scanning, status analysis, parallel fetch, and conflict handling orchestration
 - [ ] **Phase 4: Config + Safety** - YAML configuration, backup/rollback, and structured logging
@@ -34,8 +34,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Output respects NO_COLOR env var and disables colors when stdout is not a TTY
 
 Plans:
-- [ ] 01-01-PLAN.md — Go module init, project layout, output utilities, and cobra root command with subcommand stubs
-- [ ] 01-02-PLAN.md — Version command, shell completions, backwards compat hints, exit codes, and test suite
+- [x] 01-01-PLAN.md — Go module init, project layout, output utilities, and cobra root command with subcommand stubs
+- [x] 01-02-PLAN.md — Version command, shell completions, backwards compat hints, exit codes, and test suite
 
 ### Phase 2: Git Layer
 **Goal**: A testable git abstraction that handles all git operations SSU needs, with context timeouts and correct branch detection
@@ -129,7 +129,7 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Not started | - |
+| 1. Foundation | 2/2 | Complete | 2026-02-09 |
 | 2. Git Layer | 0/3 | Not started | - |
 | 3. Engine | 0/3 | Not started | - |
 | 4. Config + Safety | 0/3 | Not started | - |

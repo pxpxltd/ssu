@@ -25,11 +25,11 @@
 
 ### CLI Framework
 
-- [ ] **CLI-01**: Subcommand-based CLI: `ssu status`, `ssu update`, `ssu push`, `ssu rollback`
-- [ ] **CLI-02**: Shell completions (bash/zsh/fish) via cobra
-- [ ] **CLI-03**: Version command with build info (version, commit, date)
-- [ ] **CLI-04**: Backwards compatibility hints (old `--status` -> suggests `ssu status`)
-- [ ] **CLI-05**: Meaningful exit codes: 0=success, 1=error, 2=conflict
+- [x] **CLI-01**: Subcommand-based CLI: `ssu status`, `ssu update`, `ssu push`, `ssu rollback`
+- [x] **CLI-02**: Shell completions (bash/zsh/fish) via cobra
+- [x] **CLI-03**: Version command with build info (version, commit, date)
+- [x] **CLI-04**: Backwards compatibility hints (old `--status` -> suggests `ssu status`)
+- [x] **CLI-05**: Meaningful exit codes: 0=success, 1=error, 2=conflict
 - [ ] **CLI-06**: `--json` output on `ssu status` for scripting/CI
 - [ ] **CLI-07**: `ssu exec <command>` to run command across selected submodules
 - [ ] **CLI-08**: `ssu init` wizard for first-time config setup
@@ -41,7 +41,7 @@
 - [ ] **TUI-03**: Auto/batch mode (`--auto` or `--all`) for CI/CD, no prompts
 - [ ] **TUI-04**: Dry-run preview showing what would change
 - [ ] **TUI-05**: Progress bar during parallel fetch (per-submodule status)
-- [ ] **TUI-06**: NO_COLOR support and TTY detection
+- [x] **TUI-06**: NO_COLOR support and TTY detection
 - [ ] **TUI-07**: Graceful Ctrl+C handling (clean terminal state, show partial results)
 
 ### Configuration
@@ -116,11 +116,11 @@
 | CONF-02 | Phase 3 | Pending |
 | CONF-03 | Phase 3 | Pending |
 | CONF-04 | Phase 3 | Pending |
-| CLI-01 | Phase 1 | Pending |
-| CLI-02 | Phase 1 | Pending |
-| CLI-03 | Phase 1 | Pending |
-| CLI-04 | Phase 1 | Pending |
-| CLI-05 | Phase 1 | Pending |
+| CLI-01 | Phase 1 | Complete |
+| CLI-02 | Phase 1 | Complete |
+| CLI-03 | Phase 1 | Complete |
+| CLI-04 | Phase 1 | Complete |
+| CLI-05 | Phase 1 | Complete |
 | CLI-06 | Phase 5 | Pending |
 | CLI-07 | Phase 5 | Pending |
 | CLI-08 | Phase 5 | Pending |
@@ -129,7 +129,7 @@
 | TUI-03 | Phase 5 | Pending |
 | TUI-04 | Phase 5 | Pending |
 | TUI-05 | Phase 5 | Pending |
-| TUI-06 | Phase 1 | Pending |
+| TUI-06 | Phase 1 | Complete |
 | TUI-07 | Phase 5 | Pending |
 | CFG-01 | Phase 4 | Pending |
 | CFG-02 | Phase 4 | Pending |
