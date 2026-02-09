@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - Go project structure, cobra CLI skeleton, and cross-cutting concerns
 - [x] **Phase 2: Git Layer** - GitService interface and os/exec implementation with smart branch detection
 - [x] **Phase 3: Engine** - Scanning, status analysis, parallel fetch, and conflict handling orchestration
-- [ ] **Phase 4: Config + Safety** - YAML configuration, backup/rollback, and structured logging
+- [x] **Phase 4: Config + Safety** - YAML configuration, backup/rollback, and structured logging
 - [ ] **Phase 5: Commands + TUI** - User-facing commands wired to bubbletea interactive selector
 - [ ] **Phase 5.1: Claude Code Integration** - Slash commands and CLAUDE.md snippet for AI-assisted submodule management (INSERTED)
 - [ ] **Phase 6: Distribution** - Cross-platform builds, package managers, and install script
@@ -85,9 +85,9 @@ Plans:
   5. Logs are written to ~/.ssu/<project>/logs/ with size/date-based rotation
 
 Plans:
-- [ ] 04-01-PLAN.md — Viper config loading with layering, config types, defaults, source annotations, PersistentPreRunE, and ssu config show command
-- [ ] 04-02-PLAN.md — JSON backup with atomic writes, rollback with SHA+branch restore, bash-era compatibility, backup list/clean commands
-- [ ] 04-03-PLAN.md — slog-based structured logging with BracketHandler, lumberjack rotation, verbose stderr output
+- [x] 04-01-PLAN.md — Viper config loading with layering, config types, defaults, source annotations, PersistentPreRunE, and ssu config show command
+- [x] 04-02-PLAN.md — JSON backup with atomic writes, rollback with SHA+branch restore, bash-era compatibility, backup list/clean commands
+- [x] 04-03-PLAN.md — slog-based structured logging with BracketHandler, lumberjack rotation, verbose stderr output
 
 ### Phase 5: Commands + TUI
 **Goal**: Fully functional interactive CLI where users can scan, select, update, push, and rollback submodules through a polished TUI
@@ -147,7 +147,7 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 5.1 > 6
 | 1. Foundation | 2/2 | Complete | 2026-02-09 |
 | 2. Git Layer | 3/3 | Complete | 2026-02-09 |
 | 3. Engine | 3/3 | Complete | 2026-02-09 |
-| 4. Config + Safety | 0/3 | Planned | - |
+| 4. Config + Safety | 3/3 | Complete | 2026-02-09 |
 | 5. Commands + TUI | 0/4 | Not started | - |
 | 5.1 Claude Code Integration | 0/2 | Planned | - |
 | 6. Distribution | 0/3 | Not started | - |

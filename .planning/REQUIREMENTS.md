@@ -46,19 +46,19 @@
 
 ### Configuration
 
-- [ ] **CFG-01**: YAML config file at `~/.ssu/config.yaml`
-- [ ] **CFG-02**: Per-project config override via `.ssu.yaml` in project root
-- [ ] **CFG-03**: Configurable skip list, branch priority, parallel jobs
-- [ ] **CFG-04**: Config layering: defaults < global < project < env vars < CLI flags
+- [x] **CFG-01**: YAML config file at `~/.ssu/config.yaml`
+- [x] **CFG-02**: Per-project config override via `.ssu.yaml` in project root
+- [x] **CFG-03**: Configurable skip list, branch priority, parallel jobs
+- [x] **CFG-04**: Config layering: defaults < global < project < env vars < CLI flags
 
 ### Safety & Recovery
 
-- [ ] **SAFE-01**: JSON backup before modifications with atomic writes (write temp, rename)
-- [ ] **SAFE-02**: Rollback from backup file (compatible with bash-era backups)
-- [ ] **SAFE-03**: Fail-fast mode (exit on first error)
-- [ ] **SAFE-04**: Backup management: `ssu backup list`, `ssu backup clean --keep N`
-- [ ] **SAFE-05**: Log rotation by size/date with configurable limits
-- [ ] **SAFE-06**: Logging to `~/.ssu/<project>/logs/`
+- [x] **SAFE-01**: JSON backup before modifications with atomic writes (write temp, rename)
+- [x] **SAFE-02**: Rollback from backup file (compatible with bash-era backups)
+- [x] **SAFE-03**: Fail-fast mode (exit on first error)
+- [x] **SAFE-04**: Backup management: `ssu backup list`, `ssu backup clean --keep N`
+- [x] **SAFE-05**: Log rotation by size/date with configurable limits
+- [x] **SAFE-06**: Logging to `~/.ssu/<project>/logs/`
 
 ### Push Operations
 
@@ -131,16 +131,16 @@
 | TUI-05 | Phase 5 | Pending |
 | TUI-06 | Phase 1 | Complete |
 | TUI-07 | Phase 5 | Pending |
-| CFG-01 | Phase 4 | Pending |
-| CFG-02 | Phase 4 | Pending |
-| CFG-03 | Phase 4 | Pending |
-| CFG-04 | Phase 4 | Pending |
-| SAFE-01 | Phase 4 | Pending |
-| SAFE-02 | Phase 4 | Pending |
-| SAFE-03 | Phase 4 | Pending |
-| SAFE-04 | Phase 4 | Pending |
-| SAFE-05 | Phase 4 | Pending |
-| SAFE-06 | Phase 4 | Pending |
+| CFG-01 | Phase 4 | Complete |
+| CFG-02 | Phase 4 | Complete |
+| CFG-03 | Phase 4 | Complete |
+| CFG-04 | Phase 4 | Complete |
+| SAFE-01 | Phase 4 | Complete |
+| SAFE-02 | Phase 4 | Complete |
+| SAFE-03 | Phase 4 | Complete |
+| SAFE-04 | Phase 4 | Complete |
+| SAFE-05 | Phase 4 | Complete |
+| SAFE-06 | Phase 4 | Complete |
 | PUSH-01 | Phase 3 | Complete |
 | PUSH-02 | Phase 5 | Pending |
 | PUSH-03 | Phase 2 | Complete |
@@ -159,4 +159,4 @@
 
 ---
 *Requirements defined: 2026-02-09*
-*Last updated: 2026-02-09 after Phase 3 completion*
+*Last updated: 2026-02-09 after Phase 4 completion*
