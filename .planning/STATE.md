@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 5 of 6 (Commands + TUI)
-Plan: 2 of N in current phase
+Plan: 3 of N in current phase
 Status: In progress
-Last activity: 2026-02-09 -- Completed 05-02-PLAN.md (TUI Components)
+Last activity: 2026-02-09 -- Completed 05-03-PLAN.md (Update Command)
 
-Progress: [#############_____] 72% (13/18 plans)
+Progress: [##############____] 78% (14/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 3.5min
-- Total execution time: 49min
+- Total plans completed: 14
+- Average duration: 3.6min
+- Total execution time: 55min
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: [#############_____] 72% (13/18 plans)
 | 02-git-layer | 3/3 | 9min | 3min |
 | 03-engine | 3/3 | 9min | 3min |
 | 04-config-safety | 3/3 | 12min | 4min |
-| 05-commands-tui | 2/N | 12min | 6min |
+| 05-commands-tui | 3/N | 18min | 6min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 3min, 5min, 6min, 6min
+- Last 5 plans: 3min, 5min, 6min, 6min, 6min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -92,10 +92,15 @@ Recent decisions affecting current work:
 - [05-02]: Confirmation is a state within SelectorModel, not a separate bubbletea model
 - [05-02]: Selections tracked by original index to persist across filter changes
 - [05-02]: ProgressModel.Result() returns interface{} to avoid circular tui/engine import
+- [05-03]: exitError type centralized in exitcodes.go (shared between update+push commands)
+- [05-03]: Backup created before every update (auto and interactive), non-fatal on failure
+- [05-03]: resolveRef uses os/exec directly for rev-parse (ExecGit.run is unexported)
+- [05-03]: Non-TTY falls back to auto mode (same code path as --auto flag)
+- [05-03]: Dynamic total in ProgressModel (starts at 0, updated via FetchProgressMsg.Total)
 
 ### Roadmap Evolution
 
-- Phase 5.1 inserted after Phase 5: Claude Code Integration (URGENT) — slash commands + CLAUDE.md snippet for AI-assisted submodule management
+- Phase 5.1 inserted after Phase 5: Claude Code Integration (URGENT) -- slash commands + CLAUDE.md snippet for AI-assisted submodule management
 
 ### Pending Todos
 
@@ -108,5 +113,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05-02-PLAN.md (TUI Components)
+Stopped at: Completed 05-03-PLAN.md (Update Command)
 Resume file: None
