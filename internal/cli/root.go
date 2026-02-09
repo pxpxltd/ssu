@@ -57,6 +57,7 @@ Run without arguments for an interactive menu, or use a subcommand directly.`,
 		NewConfigCmd(),
 		NewVersionCmd(version, commit, date),
 		NewCompletionCmd(),
+		NewClaudeCmd(),
 	)
 
 	return root
