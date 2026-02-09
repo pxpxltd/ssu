@@ -131,7 +131,7 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 6
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-02-09 |
 | 2. Git Layer | 3/3 | Complete | 2026-02-09 |
-| 3. Engine | 0/3 | Not started | - |
+| 3. Engine | 3/3 | Complete | 2026-02-09 |
 | 4. Config + Safety | 0/3 | Planned | - |
 | 5. Commands + TUI | 0/4 | Not started | - |
 | 6. Distribution | 0/3 | Not started | - |
