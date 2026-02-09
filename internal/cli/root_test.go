@@ -25,7 +25,8 @@ func TestRootCmdHelp(t *testing.T) {
 }
 
 func TestRootCmdSubcommandStubs(t *testing.T) {
-	stubs := []string{"status", "update", "push", "rollback", "backup"}
+	// Commands still in stub form (real implementations come in Phase 5)
+	stubs := []string{"status", "update", "push"}
 
 	for _, sub := range stubs {
 		t.Run(sub, func(t *testing.T) {
@@ -40,6 +41,25 @@ func TestRootCmdSubcommandStubs(t *testing.T) {
 
 			if !strings.Contains(buf.String(), "not implemented yet") {
 				t.Errorf("%s output missing 'not implemented yet'\ngot: %s", sub, buf.String())
+			}
+		})
+	}
+}
+
+func TestRootCmdImplementedSubcommands(t *testing.T) {
+	// Commands with real implementations (Phase 4)
+	cmds := []string{"backup", "rollback"}
+
+	for _, sub := range cmds {
+		t.Run(sub, func(t *testing.T) {
+			root := NewRootCmd("dev", "test", "now")
+			var buf bytes.Buffer
+			root.SetOut(&buf)
+			root.SetArgs([]string{sub})
+
+			// Should run without error
+			if err := root.Execute(); err != nil {
+				t.Fatalf("unexpected error running %q: %v", sub, err)
 			}
 		})
 	}
