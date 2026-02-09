@@ -17,6 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Engine** - Scanning, status analysis, parallel fetch, and conflict handling orchestration
 - [ ] **Phase 4: Config + Safety** - YAML configuration, backup/rollback, and structured logging
 - [ ] **Phase 5: Commands + TUI** - User-facing commands wired to bubbletea interactive selector
+- [ ] **Phase 5.1: Claude Code Integration** - Slash commands and CLAUDE.md snippet for AI-assisted submodule management (INSERTED)
 - [ ] **Phase 6: Distribution** - Cross-platform builds, package managers, and install script
 
 ## Phase Details
@@ -106,9 +107,23 @@ Plans:
 - [ ] 05-03-PLAN.md — Update command wired to engine + TUI with progress, selector, dry-run, auto, Ctrl+C
 - [ ] 05-04-PLAN.md — Push command, exec command, init wizard, root command updates
 
+### Phase 5.1: Claude Code Integration (INSERTED)
+**Goal**: Slash commands and CLAUDE.md snippet so Claude Code can manage submodules via SSU out of the box
+**Depends on**: Phase 5
+**Plans:** 2 plans
+**Success Criteria** (what must be TRUE):
+  1. Custom slash commands (`/ssu:status`, `/ssu:update`, `/ssu:push`) are defined in `.claude/commands/` and work from any project with submodules
+  2. A CLAUDE.md snippet is generated that teaches Claude Code about SSU's capabilities and when to use it instead of raw git submodule commands
+  3. `ssu claude install` copies commands to `~/.claude/commands/` for global availability
+  4. Commands handle both interactive and `--auto` modes correctly in Claude Code's execution context
+
+Plans:
+- [ ] 05.1-01-PLAN.md — Embedded command markdown files, CLAUDE.md snippet, embed.go, install logic with tests
+- [ ] 05.1-02-PLAN.md — Cobra claude command with install and snippet subcommands, root.go registration
+
 ### Phase 6: Distribution
 **Goal**: Users can install SSU via their preferred method on any supported platform
-**Depends on**: Phase 5
+**Depends on**: Phase 5, Phase 5.1
 **Requirements**: DIST-01, DIST-02, DIST-03, DIST-04, DIST-05, DIST-06
 **Success Criteria** (what must be TRUE):
   1. `go install github.com/.../cmd/ssu@latest` installs a working binary
@@ -125,7 +140,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 6
+Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 5.1 > 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -134,4 +149,5 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 6
 | 3. Engine | 3/3 | Complete | 2026-02-09 |
 | 4. Config + Safety | 0/3 | Planned | - |
 | 5. Commands + TUI | 0/4 | Not started | - |
+| 5.1 Claude Code Integration | 0/2 | Planned | - |
 | 6. Distribution | 0/3 | Not started | - |
