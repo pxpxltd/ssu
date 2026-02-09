@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/pxpxltd/ssu/internal/cli"
+	"github.com/pxpxltd/ssu/internal/cli/compat"
 )
 
 // Set via ldflags at build time:
@@ -39,9 +40,14 @@ func main() {
 		}
 	}
 
+	// Check for old-style bash flags and print migration hints.
+	if compat.CheckOldFlags(os.Args, os.Stderr) {
+		os.Exit(cli.ExitError)
+	}
+
 	root := cli.NewRootCmd(version, commit, date)
 	if err := root.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		os.Exit(cli.ExitError)
 	}
 }
