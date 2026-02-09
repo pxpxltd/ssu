@@ -70,10 +70,11 @@ func (s SubmoduleItem) DetailContent() string {
 
 // SelectorOpts configures the selector model.
 type SelectorOpts struct {
-	Title      string                                 // Title displayed at the top
-	ShowDetail bool                                   // Show detail pane by default
-	FilterFn   func(item SelectorItem) bool           // Optional pre-filter
-	Operation  string                                 // Operation name for confirmation (e.g. "update", "push")
+	Title      string                       // Title displayed at the top
+	Subtitle   string                       // Informational line below the title
+	ShowDetail bool                         // Show detail pane by default
+	FilterFn   func(item SelectorItem) bool // Optional pre-filter
+	Operation  string                       // Operation name for confirmation (e.g. "update", "push")
 }
 
 // ---------------------------------------------------------------------------

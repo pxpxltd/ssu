@@ -185,6 +185,7 @@ func runPushInteractive(ctx context.Context, cmd *cobra.Command, eng *engine.Eng
 	items := tui.SubmoduleItems(result.Submodules)
 	selectorModel := tui.NewSelectorModel(items, tui.SelectorOpts{
 		Title:      "Select submodules to push",
+		Subtitle:   fmt.Sprintf("%d ahead of %d submodules scanned", len(targets), len(result.Submodules)),
 		ShowDetail: false,
 		FilterFn:   tui.FilterAhead(),
 		Operation:  "push",

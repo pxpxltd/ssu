@@ -230,6 +230,7 @@ func runUpdateInteractive(ctx context.Context, cancel context.CancelFunc, eng *e
 	items := tui.SubmoduleItems(pending)
 	selModel := tui.NewSelectorModel(items, tui.SelectorOpts{
 		Title:      "Select submodules to update",
+		Subtitle:   fmt.Sprintf("%d pending of %d submodules scanned", len(pending), len(scanResult.Submodules)),
 		ShowDetail: true,
 		Operation:  "update",
 	})

@@ -30,6 +30,7 @@ const (
 // detail, help overlay, sorting, and a confirmation step.
 type SelectorModel struct {
 	title       string
+	subtitle    string
 	operation   string // operation name for confirmation (e.g. "update")
 	items       []SelectorItem
 	cursor      int
@@ -80,6 +81,7 @@ func NewSelectorModel(items []SelectorItem, opts SelectorOpts) SelectorModel {
 
 	m := SelectorModel{
 		title:       opts.Title,
+		subtitle:    opts.Subtitle,
 		operation:   op,
 		items:       filtered,
 		allSelected: make(map[int]bool),
@@ -264,10 +266,15 @@ func (m SelectorModel) View() string {
 
 	var b strings.Builder
 
-	// Title.
+	// Title and subtitle header.
 	if m.title != "" {
 		b.WriteString(TitleStyle.Render(m.title))
-		b.WriteString("\n\n")
+		b.WriteString("\n")
+		if m.subtitle != "" {
+			b.WriteString(MutedStyle.Render(m.subtitle))
+			b.WriteString("\n")
+		}
+		b.WriteString("\n")
 	}
 
 	// Filter line.
@@ -285,6 +292,9 @@ func (m SelectorModel) View() string {
 	headerLines := 0
 	if m.title != "" {
 		headerLines += 2
+		if m.subtitle != "" {
+			headerLines++
+		}
 	}
 	if m.filtering || m.filterInput != "" {
 		headerLines++
@@ -539,6 +549,9 @@ func statusSortPriority(s git.SubmoduleStatus) int {
 // resizeViewport adjusts the viewport dimensions based on current layout.
 func (m *SelectorModel) resizeViewport() {
 	headerLines := 2
+	if m.subtitle != "" {
+		headerLines++
+	}
 	if m.filtering || m.filterInput != "" {
 		headerLines++
 	}

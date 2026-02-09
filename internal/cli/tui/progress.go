@@ -62,7 +62,7 @@ type ProgressModel struct {
 
 // NewProgressModel creates a new progress bar model.
 func NewProgressModel(total int) ProgressModel {
-	bar := progress.New(progress.WithDefaultGradient())
+	bar := progress.New(progress.WithGradient("#76B947", "#2E7D32"))
 	return ProgressModel{
 		bar:   bar,
 		total: total,

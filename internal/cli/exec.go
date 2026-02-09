@@ -125,7 +125,8 @@ func runExec(cmd *cobra.Command, args []string) error {
 		}
 
 		selModel := tui.NewSelectorModel(items, tui.SelectorOpts{
-			Title:     fmt.Sprintf("Select submodules for: %s", cmdLabel),
+			Title:    fmt.Sprintf("Select submodules for: %s", cmdLabel),
+			Subtitle: fmt.Sprintf("%d submodules available", len(nonSkipped)),
 			Operation: "exec",
 		})
 
