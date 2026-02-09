@@ -1,14 +1,14 @@
 # Requirements: SSU Go Rewrite
 
 **Defined:** 2026-02-09
-**Core Value:** Safely update and push git submodules with zero data loss — smart branch detection, automatic backups, conflict resolution.
+**Core Value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
 
 ## v1 Requirements
 
 ### Core Git Operations
 
 - [ ] **CORE-01**: Parallel fetch of all submodule remotes with configurable concurrency
-- [ ] **CORE-02**: Smart branch detection (develop → master → main → remote HEAD → fallback)
+- [ ] **CORE-02**: Smart branch detection (develop > master > main > remote HEAD > fallback)
 - [ ] **CORE-03**: Feature branch preservation (submodules on feature branches stay on them)
 - [ ] **CORE-04**: Status detection for each submodule (pending, current, modified, ahead, conflict, missing, skipped)
 - [ ] **CORE-05**: Changelog preview showing incoming commits per submodule
@@ -28,7 +28,7 @@
 - [ ] **CLI-01**: Subcommand-based CLI: `ssu status`, `ssu update`, `ssu push`, `ssu rollback`
 - [ ] **CLI-02**: Shell completions (bash/zsh/fish) via cobra
 - [ ] **CLI-03**: Version command with build info (version, commit, date)
-- [ ] **CLI-04**: Backwards compatibility hints (old `--status` → suggests `ssu status`)
+- [ ] **CLI-04**: Backwards compatibility hints (old `--status` -> suggests `ssu status`)
 - [ ] **CLI-05**: Meaningful exit codes: 0=success, 1=error, 2=conflict
 - [ ] **CLI-06**: `--json` output on `ssu status` for scripting/CI
 - [ ] **CLI-07**: `ssu exec <command>` to run command across selected submodules
@@ -90,7 +90,7 @@
 
 | Feature | Reason |
 |---------|--------|
-| GUI/web interface | CLI tool — invest in TUI instead |
+| GUI/web interface | CLI tool -- invest in TUI instead |
 | Non-git VCS | Git submodules are git-only |
 | Submodule creation/removal | `git submodule add/deinit` works fine |
 | Windows native | WSL exists. Target audience has Unix env. |
@@ -104,59 +104,59 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | TBD | Pending |
-| CORE-02 | TBD | Pending |
-| CORE-03 | TBD | Pending |
-| CORE-04 | TBD | Pending |
-| CORE-05 | TBD | Pending |
-| CORE-06 | TBD | Pending |
-| CORE-07 | TBD | Pending |
-| CORE-08 | TBD | Pending |
-| CONF-01 | TBD | Pending |
-| CONF-02 | TBD | Pending |
-| CONF-03 | TBD | Pending |
-| CONF-04 | TBD | Pending |
-| CLI-01 | TBD | Pending |
-| CLI-02 | TBD | Pending |
-| CLI-03 | TBD | Pending |
-| CLI-04 | TBD | Pending |
-| CLI-05 | TBD | Pending |
-| CLI-06 | TBD | Pending |
-| CLI-07 | TBD | Pending |
-| CLI-08 | TBD | Pending |
-| TUI-01 | TBD | Pending |
-| TUI-02 | TBD | Pending |
-| TUI-03 | TBD | Pending |
-| TUI-04 | TBD | Pending |
-| TUI-05 | TBD | Pending |
-| TUI-06 | TBD | Pending |
-| TUI-07 | TBD | Pending |
-| CFG-01 | TBD | Pending |
-| CFG-02 | TBD | Pending |
-| CFG-03 | TBD | Pending |
-| CFG-04 | TBD | Pending |
-| SAFE-01 | TBD | Pending |
-| SAFE-02 | TBD | Pending |
-| SAFE-03 | TBD | Pending |
-| SAFE-04 | TBD | Pending |
-| SAFE-05 | TBD | Pending |
-| SAFE-06 | TBD | Pending |
-| PUSH-01 | TBD | Pending |
-| PUSH-02 | TBD | Pending |
-| PUSH-03 | TBD | Pending |
-| PUSH-04 | TBD | Pending |
-| DIST-01 | TBD | Pending |
-| DIST-02 | TBD | Pending |
-| DIST-03 | TBD | Pending |
-| DIST-04 | TBD | Pending |
-| DIST-05 | TBD | Pending |
-| DIST-06 | TBD | Pending |
+| CORE-01 | Phase 3 | Pending |
+| CORE-02 | Phase 2 | Pending |
+| CORE-03 | Phase 2 | Pending |
+| CORE-04 | Phase 3 | Pending |
+| CORE-05 | Phase 3 | Pending |
+| CORE-06 | Phase 2 | Pending |
+| CORE-07 | Phase 2 | Pending |
+| CORE-08 | Phase 3 | Pending |
+| CONF-01 | Phase 3 | Pending |
+| CONF-02 | Phase 3 | Pending |
+| CONF-03 | Phase 3 | Pending |
+| CONF-04 | Phase 3 | Pending |
+| CLI-01 | Phase 1 | Pending |
+| CLI-02 | Phase 1 | Pending |
+| CLI-03 | Phase 1 | Pending |
+| CLI-04 | Phase 1 | Pending |
+| CLI-05 | Phase 1 | Pending |
+| CLI-06 | Phase 5 | Pending |
+| CLI-07 | Phase 5 | Pending |
+| CLI-08 | Phase 5 | Pending |
+| TUI-01 | Phase 5 | Pending |
+| TUI-02 | Phase 5 | Pending |
+| TUI-03 | Phase 5 | Pending |
+| TUI-04 | Phase 5 | Pending |
+| TUI-05 | Phase 5 | Pending |
+| TUI-06 | Phase 1 | Pending |
+| TUI-07 | Phase 5 | Pending |
+| CFG-01 | Phase 4 | Pending |
+| CFG-02 | Phase 4 | Pending |
+| CFG-03 | Phase 4 | Pending |
+| CFG-04 | Phase 4 | Pending |
+| SAFE-01 | Phase 4 | Pending |
+| SAFE-02 | Phase 4 | Pending |
+| SAFE-03 | Phase 4 | Pending |
+| SAFE-04 | Phase 4 | Pending |
+| SAFE-05 | Phase 4 | Pending |
+| SAFE-06 | Phase 4 | Pending |
+| PUSH-01 | Phase 3 | Pending |
+| PUSH-02 | Phase 5 | Pending |
+| PUSH-03 | Phase 2 | Pending |
+| PUSH-04 | Phase 3 | Pending |
+| DIST-01 | Phase 6 | Pending |
+| DIST-02 | Phase 6 | Pending |
+| DIST-03 | Phase 6 | Pending |
+| DIST-04 | Phase 6 | Pending |
+| DIST-05 | Phase 6 | Pending |
+| DIST-06 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 42 total
-- Mapped to phases: 0
-- Unmapped: 42 (pending roadmap creation)
+- v1 requirements: 47 total
+- Mapped to phases: 47
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-09*
-*Last updated: 2026-02-09 after initial definition*
+*Last updated: 2026-02-09 after roadmap creation*
