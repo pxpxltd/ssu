@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 3 - Engine (Phase 2 complete)
+**Current focus:** Phase 3 - Engine (Plan 01 complete, Plans 02-03 remain)
 
 ## Current Position
 
-Phase: 2 of 6 (Git Layer) -- COMPLETE ✓ (verified)
-Plan: 3 of 3 in current phase
-Status: Phase complete, verified, ready for Phase 3
-Last activity: 2026-02-09 -- Phase 2 verified (5/5 criteria passed)
+Phase: 3 of 6 (Engine)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-09 -- Completed 03-01-PLAN.md
 
-Progress: [#####_____________] 28% (5/18 plans)
+Progress: [######____________] 33% (6/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 3.2min
-- Total execution time: 16min
+- Total plans completed: 6
+- Average duration: 3.3min
+- Total execution time: 20min
 
 **By Phase:**
 
@@ -29,9 +29,10 @@ Progress: [#####_____________] 28% (5/18 plans)
 |-------|-------|-------|----------|
 | 01-foundation | 2/2 | 7min | 3.5min |
 | 02-git-layer | 3/3 | 9min | 3min |
+| 03-engine | 1/3 | 4min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 3min, 3min, 2min, 4min
+- Last 5 plans: 3min, 3min, 2min, 4min, 4min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -61,6 +62,10 @@ Recent decisions affecting current work:
 - [02-03]: Merge conflict detection checks both stdout and stderr (git writes CONFLICT to stdout)
 - [02-03]: CommitsBehind/CommitsAhead return 0 on error (matching bash behavior)
 - [02-03]: Push auto-detects missing tracking branch and uses -u flag
+- [03-01]: x/sync pinned to v0.7.0 (last Go 1.21 compatible; v0.19.0 requires Go 1.24)
+- [03-01]: Zero-value errgroup (not WithContext) for continue-on-error scan semantics
+- [03-01]: Root scanned in same parallel batch as submodules, separated in results
+- [03-01]: Status priority map for PrimaryStatus display ordering
 
 ### Pending Todos
 
@@ -73,5 +78,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Phase 2 complete and verified
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None
