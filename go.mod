@@ -6,6 +6,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/sync v0.7.0
 )
 
 require (
