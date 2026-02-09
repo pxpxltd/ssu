@@ -42,6 +42,8 @@ Run without arguments for an interactive menu, or use a subcommand directly.`,
 		NewPushCmd(),
 		NewRollbackCmd(),
 		NewBackupCmd(),
+		NewVersionCmd(version, commit, date),
+		NewCompletionCmd(),
 	)
 
 	return root
