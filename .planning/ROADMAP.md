@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Go project structure, cobra CLI skeleton, and cross-cutting concerns
 - [x] **Phase 2: Git Layer** - GitService interface and os/exec implementation with smart branch detection
-- [ ] **Phase 3: Engine** - Scanning, status analysis, parallel fetch, and conflict handling orchestration
+- [x] **Phase 3: Engine** - Scanning, status analysis, parallel fetch, and conflict handling orchestration
 - [ ] **Phase 4: Config + Safety** - YAML configuration, backup/rollback, and structured logging
 - [ ] **Phase 5: Commands + TUI** - User-facing commands wired to bubbletea interactive selector
 - [ ] **Phase 6: Distribution** - Cross-platform builds, package managers, and install script
@@ -67,9 +67,9 @@ Plans:
   5. Engine detects ahead submodules with unpushed commits and skips detached HEAD submodules with a warning
 
 Plans:
-- [ ] 03-01-PLAN.md — Engine types, progress callback, parallel scanner with errgroup, submodule enumeration, and status detection
-- [ ] 03-02-PLAN.md — Update workflow with 3-step conflict resolution (stash/retry/reapply), actionable hints
-- [ ] 03-03-PLAN.md — Push workflow orchestration, ahead detection, detached HEAD handling
+- [x] 03-01-PLAN.md — Engine types, progress callback, parallel scanner with errgroup, submodule enumeration, and status detection
+- [x] 03-02-PLAN.md — Update workflow with 3-step conflict resolution (stash/retry/reapply), actionable hints
+- [x] 03-03-PLAN.md — Push workflow orchestration, ahead detection, detached HEAD handling
 
 ### Phase 4: Config + Safety
 **Goal**: Layered YAML configuration and reliable backup/rollback with structured logging
@@ -92,19 +92,19 @@ Plans:
 **Goal**: Fully functional interactive CLI where users can scan, select, update, push, and rollback submodules through a polished TUI
 **Depends on**: Phase 3, Phase 4
 **Requirements**: CLI-06, CLI-07, CLI-08, TUI-01, TUI-02, TUI-03, TUI-04, TUI-05, TUI-07, PUSH-02
+**Plans:** 4 plans
 **Success Criteria** (what must be TRUE):
   1. `ssu status` displays a colorized table with root repo and all submodules; `ssu status --json` outputs machine-readable JSON
   2. `ssu update` launches a bubbletea multi-select TUI (arrow/vim keys, space toggle, all/none, confirm/quit) for choosing submodules to update, with `--auto` bypassing the TUI for CI/CD
   3. `ssu push` shows ahead submodules in the TUI selector for interactive push selection
   4. `ssu update --dry-run` previews what would change without modifying anything
   5. Parallel fetch shows a progress indicator per submodule, and Ctrl+C cleanly restores terminal state and shows partial results
-**Plans**: TBD
 
 Plans:
-- [ ] 05-01: Status command with colorized table output and --json flag
-- [ ] 05-02: Bubbletea multi-select TUI model (selector, checkboxes, progress bar)
-- [ ] 05-03: Update and push commands wired to engine + TUI, dry-run mode, auto mode
-- [ ] 05-04: Exec command, init wizard, Ctrl+C handling
+- [ ] 05-01-PLAN.md — Install charmbracelet deps, shared TUI styles, status command with lipgloss/table and --json
+- [ ] 05-02-PLAN.md — Multi-select TUI selector model (checkboxes, filter, split-pane, confirm) and progress bar model
+- [ ] 05-03-PLAN.md — Update command wired to engine + TUI with progress, selector, dry-run, auto, Ctrl+C
+- [ ] 05-04-PLAN.md — Push command, exec command, init wizard, root command updates
 
 ### Phase 6: Distribution
 **Goal**: Users can install SSU via their preferred method on any supported platform
