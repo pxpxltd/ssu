@@ -144,6 +144,7 @@ const (
 	StatusConflict SubmoduleStatus = "conflict"
 	StatusMissing  SubmoduleStatus = "missing"
 	StatusSkipped  SubmoduleStatus = "skipped"
+	StatusError    SubmoduleStatus = "error"
 )
 
 // ---------------------------------------------------------------------------
