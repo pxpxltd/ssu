@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 5.1 - Claude Code Integration (next phase to plan)
+**Current focus:** Phase 5.1 - Claude Code Integration
 
 ## Current Position
 
-Phase: 5 of 6 (Commands + TUI) -- COMPLETE
-Plan: 4 of 4 in current phase
-Status: Complete
-Last activity: 2026-02-09 -- Completed Phase 5 (all 4 plans, verified)
+Phase: 5.1 of 6 (Claude Code Integration)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-09 -- Completed 05.1-01-PLAN.md
 
-Progress: [###############___] 83% (15/18 plans)
+Progress: [################__] 89% (16/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 3.7min
-- Total execution time: 61min
+- Total plans completed: 16
+- Average duration: 3.6min
+- Total execution time: 63min
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [###############___] 83% (15/18 plans)
 | 03-engine | 3/3 | 9min | 3min |
 | 04-config-safety | 3/3 | 12min | 4min |
 | 05-commands-tui | 4/4 | 26min | 6.5min |
+| 05.1-claude-code | 1/2 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 5min, 6min, 6min, 6min, 6min
-- Trend: stable
+- Last 5 plans: 6min, 6min, 6min, 6min, 2min
+- Trend: fast (lightweight package, no deps)
 
 *Updated after each plan completion*
 
@@ -100,6 +101,7 @@ Recent decisions affecting current work:
 - [05-04]: exec runs sequentially (not parallel) for readable output ordering
 - [05-04]: init uses bufio.Scanner prompts, not bubbletea (simple sequential flow)
 - [05-04]: Interactive menu now has 7 items (exec added between push and rollback)
+- [05.1-01]: Standard Go testing (not testify) to match project conventions
 
 ### Roadmap Evolution
 
@@ -116,5 +118,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed Phase 5 (Commands + TUI) -- verified, all 4 plans
+Stopped at: Completed 05.1-01-PLAN.md (embedded commands + install logic)
 Resume file: None
