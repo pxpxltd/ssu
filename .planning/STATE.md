@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 3 - Engine (Plan 01 complete, Plans 02-03 remain)
+**Current focus:** Phase 3 - Engine (Plans 01-02 complete, Plan 03 remains)
 
 ## Current Position
 
 Phase: 3 of 6 (Engine)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-09 -- Completed 03-01-PLAN.md
+Last activity: 2026-02-09 -- Completed 03-02-PLAN.md
 
-Progress: [######____________] 33% (6/18 plans)
+Progress: [#######___________] 39% (7/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 3.3min
-- Total execution time: 20min
+- Total execution time: 23min
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [######____________] 33% (6/18 plans)
 |-------|-------|-------|----------|
 | 01-foundation | 2/2 | 7min | 3.5min |
 | 02-git-layer | 3/3 | 9min | 3min |
-| 03-engine | 1/3 | 4min | 4min |
+| 03-engine | 2/3 | 7min | 3.5min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 3min, 2min, 4min, 4min
+- Last 5 plans: 3min, 2min, 4min, 4min, 3min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -66,6 +66,9 @@ Recent decisions affecting current work:
 - [03-01]: Zero-value errgroup (not WithContext) for continue-on-error scan semantics
 - [03-01]: Root scanned in same parallel batch as submodules, separated in results
 - [03-01]: Status priority map for PrimaryStatus display ordering
+- [03-02]: Update accepts []*SubmoduleInfo targets (caller decides what to update, not engine)
+- [03-02]: Dirty path uses stash -> merge -> stash-pop with abort+restore on failure
+- [03-02]: ConflictHint contains relative path (info.Path) not absolute path
 
 ### Pending Todos
 
@@ -78,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 03-01-PLAN.md
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
