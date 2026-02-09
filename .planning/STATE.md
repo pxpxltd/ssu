@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 5 - Commands + TUI (next phase to plan)
+**Current focus:** Phase 5 - Commands + TUI (in progress)
 
 ## Current Position
 
-Phase: 4 of 6 (Config + Safety) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-02-09 -- Completed Phase 4 (all 3 plans, verified)
+Phase: 5 of 6 (Commands + TUI)
+Plan: 2 of N in current phase
+Status: In progress
+Last activity: 2026-02-09 -- Completed 05-02-PLAN.md (TUI Components)
 
-Progress: [###########_______] 61% (11/18 plans)
+Progress: [#############_____] 72% (13/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 13
 - Average duration: 3.5min
-- Total execution time: 37min
+- Total execution time: 49min
 
 **By Phase:**
 
@@ -31,9 +31,10 @@ Progress: [###########_______] 61% (11/18 plans)
 | 02-git-layer | 3/3 | 9min | 3min |
 | 03-engine | 3/3 | 9min | 3min |
 | 04-config-safety | 3/3 | 12min | 4min |
+| 05-commands-tui | 2/N | 12min | 6min |
 
 **Recent Trend:**
-- Last 5 plans: 2min, 5min, 4min, 3min, 5min
+- Last 5 plans: 4min, 3min, 5min, 6min, 6min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -84,6 +85,9 @@ Recent decisions affecting current work:
 - [04-03]: Logger failure is non-fatal -- stderr warning, command continues
 - [04-03]: version/completion skip logger init (lightweight utility commands)
 - [04-03]: slog.SetDefault() for global access (no context threading needed)
+- [05-02]: Confirmation is a state within SelectorModel, not a separate bubbletea model
+- [05-02]: Selections tracked by original index to persist across filter changes
+- [05-02]: ProgressModel.Result() returns interface{} to avoid circular tui/engine import
 
 ### Roadmap Evolution
 
@@ -100,5 +104,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed Phase 4 (Config + Safety) -- verified, all 3 plans
+Stopped at: Completed 05-02-PLAN.md (TUI Components)
 Resume file: None
