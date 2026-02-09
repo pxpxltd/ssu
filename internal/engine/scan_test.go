@@ -209,11 +209,14 @@ func TestScan_UninitializedSubmodule(t *testing.T) {
 }
 
 func TestScan_SkipList(t *testing.T) {
+	var fetchMu sync.Mutex
 	fetchCalled := make(map[string]bool)
 
 	mock := baseMock([]string{"keep", "skip-me"})
 	mock.FetchFn = func(_ context.Context, dir string, _ git.FetchOpts) (git.FetchResult, error) {
+		fetchMu.Lock()
 		fetchCalled[dir] = true
+		fetchMu.Unlock()
 		return git.FetchResult{}, nil
 	}
 
@@ -241,7 +244,10 @@ func TestScan_SkipList(t *testing.T) {
 	}
 
 	// Verify no fetch was called for skipped submodule.
-	if fetchCalled["/project/skip-me"] {
+	fetchMu.Lock()
+	skipFetched := fetchCalled["/project/skip-me"]
+	fetchMu.Unlock()
+	if skipFetched {
 		t.Error("fetch should not be called for skipped submodule")
 	}
 
