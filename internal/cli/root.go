@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/pxpxltd/ssu/internal/cli/output"
+	"github.com/pxpxltd/ssu/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -35,6 +37,11 @@ Run without arguments for an interactive menu, or use a subcommand directly.`,
 	root.PersistentFlags().BoolP("auto", "a", false, "Automatic mode (no prompts, for CI/CD)")
 	root.PersistentFlags().IntP("jobs", "j", 8, "Number of parallel fetch jobs")
 
+	// Load config before every subcommand
+	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		return loadConfig(cmd)
+	}
+
 	// Add subcommands
 	root.AddCommand(
 		NewStatusCmd(),
@@ -42,11 +49,55 @@ Run without arguments for an interactive menu, or use a subcommand directly.`,
 		NewPushCmd(),
 		NewRollbackCmd(),
 		NewBackupCmd(),
+		NewConfigCmd(),
 		NewVersionCmd(version, commit, date),
 		NewCompletionCmd(),
 	)
 
 	return root
+}
+
+// loadConfig detects the project root, loads layered config, applies CLI flag
+// overrides, and stores the result in the command context.
+func loadConfig(cmd *cobra.Command) error {
+	// Detect project root via git. If not in a git repo, use cwd.
+	projectRoot, err := detectProjectRoot()
+	if err != nil {
+		// Not in a git repo -- use cwd (allows version/completion/help to work anywhere)
+		projectRoot, _ = os.Getwd()
+	}
+
+	cfg, ac, err := config.Load(projectRoot)
+	if err != nil {
+		// Config errors are warnings, not fatal -- use defaults so ssu still works
+		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: config load error: %v (using defaults)\n", err)
+		defaults := config.Defaults()
+		cfg = &defaults
+		ac = config.NewAnnotatedConfig()
+	}
+
+	// Apply CLI flag overrides (only when explicitly set by user)
+	if cmd.Flags().Changed("jobs") {
+		jobs, _ := cmd.Flags().GetInt("jobs")
+		cfg.Git.ParallelJobs = jobs
+		ac.Set("git.parallel_jobs", jobs, config.SourceFlag)
+	}
+
+	// Store config in context for subcommands
+	ctx := config.WithConfig(cmd.Context(), cfg)
+	ctx = config.WithAnnotated(ctx, ac)
+	cmd.SetContext(ctx)
+
+	return nil
+}
+
+// detectProjectRoot returns the git repository root directory.
+func detectProjectRoot() (string, error) {
+	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 // showInteractiveMenu displays a simple numbered menu for TTY sessions.
