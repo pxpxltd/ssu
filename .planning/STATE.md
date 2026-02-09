@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Safely update and push git submodules with zero data loss -- smart branch detection, automatic backups, conflict resolution.
-**Current focus:** Phase 5.1 - Claude Code Integration -- COMPLETE. Next: Phase 6 (Distribution)
+**Current focus:** Phase 6 - Distribution -- In progress
 
 ## Current Position
 
-Phase: 5.1 of 6 (Claude Code Integration)
-Plan: 2 of 2 in current phase -- COMPLETE
-Status: Phase complete
-Last activity: 2026-02-09 -- Completed 05.1-02-PLAN.md
+Phase: 6 of 6 (Distribution)
+Plan: 2 of 2 in current phase -- In progress
+Status: In progress
+Last activity: 2026-02-09 -- Completed 06-02-PLAN.md
 
-Progress: [##################] 94% (17/18 plans)
+Progress: [###################] 100% (18/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
+- Total plans completed: 18
 - Average duration: 3.5min
-- Total execution time: 65min
+- Total execution time: 69min
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [##################] 94% (17/18 plans)
 | 04-config-safety | 3/3 | 12min | 4min |
 | 05-commands-tui | 4/4 | 26min | 6.5min |
 | 05.1-claude-code | 2/2 | 4min | 2min |
+| 06-distribution | 1/2 | 4min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 6min, 6min, 6min, 2min, 2min
-- Trend: fast (lightweight CLI wiring, no new deps)
+- Last 5 plans: 6min, 6min, 2min, 2min, 4min
+- Trend: fast (shell scripting, no Go compilation)
 
 *Updated after each plan completion*
 
@@ -103,6 +104,9 @@ Recent decisions affecting current work:
 - [05-04]: Interactive menu now has 7 items (exec added between push and rollback)
 - [05.1-01]: Standard Go testing (not testify) to match project conventions
 - [05.1-02]: Import alias claudepkg to avoid naming collision with cobra command variable
+- [06-02]: ARCHIVE_FILENAME global variable for POSIX-compatible return from download function
+- [06-02]: INSTALL_DIR env var override in addition to auto-detection
+- [06-02]: Version normalization: accept both v1.0.0 and 1.0.0 input
 
 ### Roadmap Evolution
 
@@ -127,5 +131,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed quick task 003 (exec command fixes)
+Stopped at: Completed 06-02-PLAN.md (install script)
 Resume file: None
