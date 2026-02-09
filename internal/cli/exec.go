@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -27,6 +28,7 @@ func NewExecCmd() *cobra.Command {
 		Long:  "Execute an arbitrary command in selected submodules.",
 		Example: `  ssu exec git status
   ssu exec --auto npm install
+  ssu exec 'git log --oneline -5'
   ssu exec ls -la`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: runExec,
@@ -84,8 +86,16 @@ func runExec(cmd *cobra.Command, args []string) error {
 	eng := engine.New(git.NewExecGit())
 	pr := output.NewPrinter(cmd.OutOrStdout())
 
+	autoMode, _ := cmd.Flags().GetBool("auto")
+	isTTY := output.IsTTY()
+
 	// Scan submodules to get the full list.
-	result, err := eng.Scan(ctx, scanOpts)
+	var result *engine.ScanResult
+	if isTTY && !autoMode {
+		result, err = runScanWithProgress(ctx, eng, scanOpts)
+	} else {
+		result, err = eng.Scan(ctx, scanOpts)
+	}
 	if err != nil {
 		return fmt.Errorf("scanning submodules: %w", err)
 	}
@@ -105,9 +115,6 @@ func runExec(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	autoMode, _ := cmd.Flags().GetBool("auto")
-	isTTY := output.IsTTY()
-
 	var targets []*engine.SubmoduleInfo
 
 	if !isTTY || autoMode {
@@ -125,9 +132,10 @@ func runExec(cmd *cobra.Command, args []string) error {
 		}
 
 		selModel := tui.NewSelectorModel(items, tui.SelectorOpts{
-			Title:    fmt.Sprintf("Select submodules for: %s", cmdLabel),
-			Subtitle: fmt.Sprintf("%d submodules available", len(nonSkipped)),
+			Title:     fmt.Sprintf("Select submodules for: %s", cmdLabel),
+			Subtitle:  fmt.Sprintf("%d submodules available", len(nonSkipped)),
 			Operation: "exec",
+			SelectAll: true,
 		})
 
 		p := tea.NewProgram(selModel)
@@ -167,8 +175,9 @@ func runExec(cmd *cobra.Command, args []string) error {
 		// Print separator header.
 		output.Bold.Fprintf(cmd.OutOrStdout(), "==> %s\n", sub.Path)
 
-		// Create and run the command.
-		c := exec.CommandContext(ctx, args[0], args[1:]...)
+		// Create and run the command via sh -c for shell interpretation.
+		// This handles both 'git status' (single arg) and git status (multi-arg).
+		c := exec.CommandContext(ctx, "sh", "-c", strings.Join(args, " "))
 		c.Dir = subDir
 		c.Stdout = cmd.OutOrStdout()
 		c.Stderr = cmd.ErrOrStderr()
