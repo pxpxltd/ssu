@@ -116,8 +116,15 @@ None.
 
 None.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | Remove Target column from status table + add progress bar | 2026-02-09 | 18150b4 | [001-remove-target-column](./quick/001-remove-target-column-from-status-table/) |
+| 002 | Green progress bar + informative selector header | 2026-02-09 | 324e153 | [002-green-progress-bar](./quick/002-green-progress-bar-and-selector-header/) |
+
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05.1-02-PLAN.md (CLI commands -- phase 5.1 complete)
+Stopped at: Completed quick tasks 001-002 (status table + TUI polish)
 Resume file: None
