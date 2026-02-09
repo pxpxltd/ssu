@@ -50,7 +50,7 @@ Plans:
   5. Push operation automatically sets up tracking branch when none exists
 
 Plans:
-- [ ] 02-01-PLAN.md — GitService interface, result/error types, Status enum, and MockGitService with compile-time check
+- [x] 02-01-PLAN.md — GitService interface, result/error types, Status enum, and MockGitService with compile-time check
 - [ ] 02-02-PLAN.md — Smart branch detection algorithm (DetectBestBranch) with 14 table-driven test cases using mock
 - [ ] 02-03-PLAN.md — ExecGit production implementation (os/exec, timeouts, stderr capture) with integration tests
 
@@ -130,7 +130,7 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-02-09 |
-| 2. Git Layer | 0/3 | Not started | - |
+| 2. Git Layer | 1/3 | In progress | - |
 | 3. Engine | 0/3 | Not started | - |
 | 4. Config + Safety | 0/3 | Not started | - |
 | 5. Commands + TUI | 0/4 | Not started | - |
