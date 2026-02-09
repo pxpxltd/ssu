@@ -1,6 +1,9 @@
 # Build output
 /ssu
 
+# goreleaser snapshot output
+/dist/
+
 # IDE
 .idea/
 .vscode/
