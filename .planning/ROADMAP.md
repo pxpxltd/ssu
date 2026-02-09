@@ -41,18 +41,18 @@ Plans:
 **Goal**: A testable git abstraction that handles all git operations SSU needs, with context timeouts and correct branch detection
 **Depends on**: Phase 1
 **Requirements**: CORE-02, CORE-03, CORE-06, CORE-07, PUSH-03
+**Plans:** 3 plans
 **Success Criteria** (what must be TRUE):
   1. GitService interface exists with mock implementation, enabling unit tests without a real git repo
   2. Smart branch detection follows the priority chain (develop > master > main > remote HEAD > fallback) and preserves feature branches
   3. Git operations use configurable context timeouts that kill hung fetches
   4. Git operations work with remotes other than "origin" when configured
   5. Push operation automatically sets up tracking branch when none exists
-**Plans**: TBD
 
 Plans:
-- [ ] 02-01: GitService interface, types (SubmoduleInfo, Status enums), and mock implementation
-- [ ] 02-02: os/exec-based real implementation with stderr capture, context timeouts, and smart branch detection
-- [ ] 02-03: Push and tracking branch operations, multiple remote support
+- [ ] 02-01-PLAN.md — GitService interface, result/error types, Status enum, and MockGitService with compile-time check
+- [ ] 02-02-PLAN.md — Smart branch detection algorithm (DetectBestBranch) with 14 table-driven test cases using mock
+- [ ] 02-03-PLAN.md — ExecGit production implementation (os/exec, timeouts, stderr capture) with integration tests
 
 ### Phase 3: Engine
 **Goal**: The core orchestrator that scans submodules in parallel, detects status, handles conflicts, and coordinates update/push workflows
