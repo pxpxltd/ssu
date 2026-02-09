@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/spf13/cobra"
 
+	"github.com/pxpxltd/ssu/internal/cli/output"
 	"github.com/pxpxltd/ssu/internal/cli/tui"
 	"github.com/pxpxltd/ssu/internal/config"
 	"github.com/pxpxltd/ssu/internal/engine"
@@ -69,15 +70,23 @@ func runStatus(cmd *cobra.Command, _ []string) error {
 		scanOpts.Concurrency = jobs
 	}
 
+	// Parse --json flag early (needed before scan to decide progress bar).
+	jsonFlag, _ := cmd.Flags().GetBool("json")
+
 	// Create engine and scan.
 	eng := engine.New(git.NewExecGit())
-	result, err := eng.Scan(cmd.Context(), scanOpts)
+
+	var result *engine.ScanResult
+	if !jsonFlag && output.IsTTY() {
+		result, err = runScanWithProgress(cmd.Context(), eng, scanOpts)
+	} else {
+		result, err = eng.Scan(cmd.Context(), scanOpts)
+	}
 	if err != nil {
 		return fmt.Errorf("scanning submodules: %w", err)
 	}
 
 	// Mode branching: --json or table.
-	jsonFlag, _ := cmd.Flags().GetBool("json")
 	if jsonFlag {
 		return printStatusJSON(cmd.OutOrStdout(), result)
 	}
@@ -104,11 +113,11 @@ func isFeatureBranch(info *engine.SubmoduleInfo) bool {
 // printStatusTable renders the scan result as a colorized lipgloss table.
 func printStatusTable(w io.Writer, result *engine.ScanResult) error {
 	t := table.New().
-		Headers("Path", "Branch", "Target", "Behind", "Feature", "Status").
+		Headers("Path", "Branch", "Behind", "Feature", "Status").
 		Border(lipgloss.NormalBorder()).
 		BorderHeader(true).
 		BorderColumn(true).
-		Width(120)
+		Width(100)
 
 	// Determine the row offset for root vs submodules.
 	hasRoot := result.Root != nil
@@ -121,7 +130,6 @@ func printStatusTable(w io.Writer, result *engine.ScanResult) error {
 		t.Row(
 			"(root)",
 			result.Root.CurrentBranch,
-			result.Root.TargetBranch,
 			behind,
 			"",
 			string(status),
@@ -139,7 +147,6 @@ func printStatusTable(w io.Writer, result *engine.ScanResult) error {
 		t.Row(
 			sm.Path,
 			sm.CurrentBranch,
-			sm.TargetBranch,
 			behind,
 			feature,
 			string(status),
@@ -156,7 +163,7 @@ func printStatusTable(w io.Writer, result *engine.ScanResult) error {
 		// Root row: bold for all columns.
 		if hasRoot && row == rootRowIdx {
 			// Status column gets status-specific color + bold.
-			if col == 5 {
+			if col == 4 {
 				status := result.Root.PrimaryStatus()
 				return tui.StyleForStatus(status).Bold(true)
 			}
@@ -164,7 +171,7 @@ func printStatusTable(w io.Writer, result *engine.ScanResult) error {
 		}
 
 		// Status column: color per status.
-		if col == 5 {
+		if col == 4 {
 			// Calculate which submodule this row maps to.
 			smIdx := row
 			if hasRoot {
