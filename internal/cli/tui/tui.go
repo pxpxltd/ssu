@@ -75,6 +75,7 @@ type SelectorOpts struct {
 	ShowDetail bool                         // Show detail pane by default
 	FilterFn   func(item SelectorItem) bool // Optional pre-filter
 	Operation  string                       // Operation name for confirmation (e.g. "update", "push")
+	SelectAll  bool                         // Pre-select all items (user deselects unwanted)
 }
 
 // ---------------------------------------------------------------------------

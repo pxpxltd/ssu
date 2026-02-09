@@ -91,6 +91,13 @@ func NewSelectorModel(items []SelectorItem, opts SelectorOpts) SelectorModel {
 		keys:        DefaultSelectorKeyMap(),
 	}
 
+	// Pre-select all items if requested.
+	if opts.SelectAll {
+		for i := range filtered {
+			m.allSelected[i] = true
+		}
+	}
+
 	// Set initial detail content if items exist.
 	if len(m.items) > 0 {
 		m.viewport.SetContent(m.items[0].DetailContent())
