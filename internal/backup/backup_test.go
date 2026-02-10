@@ -556,6 +556,140 @@ func TestRollbackEmptyBackup(t *testing.T) {
 	}
 }
 
+func TestRollbackWithResetError(t *testing.T) {
+	dir := t.TempDir()
+	backupDir := filepath.Join(dir, "backups")
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	subs := map[string]SubmoduleState{
+		"plugins/auth": {SHA: "abc123", Branch: "develop"},
+		"plugins/blog": {SHA: "def456", Branch: "main"},
+	}
+	filename, err := Create(backupDir, subs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	getCurrent := func(root string, paths []string) (map[string]SubmoduleState, error) {
+		states := make(map[string]SubmoduleState)
+		for _, p := range paths {
+			states[p] = SubmoduleState{SHA: "old000", Branch: "develop"}
+		}
+		return states, nil
+	}
+	checkout := func(dir, branch string) error {
+		return nil
+	}
+	resetHard := func(dir, sha string) error {
+		if dir == "plugins/auth" {
+			return fmt.Errorf("simulated reset failure")
+		}
+		return nil
+	}
+
+	result, err := Rollback(
+		RollbackOpts{
+			BackupPath:  filepath.Join(backupDir, filename),
+			ProjectRoot: dir,
+			BackupDir:   backupDir,
+		},
+		getCurrent, checkout, resetHard,
+	)
+	if err != nil {
+		t.Fatalf("Rollback: %v", err)
+	}
+
+	// One should fail, one should succeed
+	var failCount, successCount int
+	for _, sub := range result.Submodules {
+		if sub.Error != nil {
+			failCount++
+			if sub.Path != "plugins/auth" {
+				t.Errorf("expected auth to fail, got %s", sub.Path)
+			}
+		} else {
+			successCount++
+		}
+	}
+	if failCount != 1 {
+		t.Errorf("expected 1 failure, got %d", failCount)
+	}
+	if successCount != 1 {
+		t.Errorf("expected 1 success, got %d", successCount)
+	}
+	if result.RestoredCount != 1 {
+		t.Errorf("RestoredCount = %d, want 1", result.RestoredCount)
+	}
+}
+
+func TestRollbackBashEra(t *testing.T) {
+	dir := t.TempDir()
+	backupDir := filepath.Join(dir, "backups")
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a bash-era format backup file (no version field, dot-prefixed name)
+	bashBackup := `{
+  "timestamp": "2026-02-09T10:30:00+00:00",
+  "submodules": {
+    "plugins/auth": {"sha": "bbb222", "branch": "develop"},
+    "plugins/blog": {"sha": "ccc333", "branch": "master"}
+  }
+}`
+	bashPath := filepath.Join(dir, ".submodule-backup-20260209-103000.json")
+	if err := os.WriteFile(bashPath, []byte(bashBackup), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var checkouts, resets []string
+	getCurrent := func(root string, paths []string) (map[string]SubmoduleState, error) {
+		states := make(map[string]SubmoduleState)
+		for _, p := range paths {
+			states[p] = SubmoduleState{SHA: "old000", Branch: "develop"}
+		}
+		return states, nil
+	}
+	checkout := func(dir, branch string) error {
+		checkouts = append(checkouts, dir+"@"+branch)
+		return nil
+	}
+	resetHard := func(dir, sha string) error {
+		resets = append(resets, dir+"@"+sha)
+		return nil
+	}
+
+	result, err := Rollback(
+		RollbackOpts{
+			BackupPath:  bashPath,
+			ProjectRoot: dir,
+			BackupDir:   backupDir,
+		},
+		getCurrent, checkout, resetHard,
+	)
+	if err != nil {
+		t.Fatalf("Rollback: %v", err)
+	}
+
+	if result.RestoredCount != 2 {
+		t.Errorf("RestoredCount = %d, want 2", result.RestoredCount)
+	}
+	if len(result.Submodules) != 2 {
+		t.Errorf("expected 2 submodules in result, got %d", len(result.Submodules))
+	}
+	if len(checkouts) != 2 {
+		t.Errorf("expected 2 checkouts, got %d", len(checkouts))
+	}
+	if len(resets) != 2 {
+		t.Errorf("expected 2 resets, got %d", len(resets))
+	}
+	if result.SafetyBackupFile == "" {
+		t.Error("expected safety backup to be created")
+	}
+}
+
 // ---------- ProjectName tests ----------
 
 func TestProjectName(t *testing.T) {

@@ -1,11 +1,21 @@
 package cli
 
 import (
+	"bufio"
+	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
+	"github.com/spf13/cobra"
 
 	"github.com/pxpxltd/ssu/internal/backup"
 	"github.com/pxpxltd/ssu/internal/cli/output"
-	"github.com/spf13/cobra"
+	"github.com/pxpxltd/ssu/internal/cli/tui"
+	"github.com/pxpxltd/ssu/internal/git"
 )
 
 // NewRollbackCmd creates the rollback subcommand.
@@ -34,11 +44,11 @@ A safety backup of the current state is automatically created before restoring.`
 func runRollback(cmd *cobra.Command, args []string) error {
 	p := output.NewPrinter(cmd.OutOrStdout())
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	autoMode, _ := cmd.Flags().GetBool("auto")
 
 	// If no backup file specified, show available backups
 	if len(args) == 0 {
-		auto, _ := cmd.Flags().GetBool("auto")
-		if auto {
+		if autoMode {
 			return fmt.Errorf("rollback requires a backup file path in auto mode")
 		}
 
@@ -94,11 +104,147 @@ func runRollback(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Actual git operations are wired in Phase 5 when commands connect to the engine.
-	// For now, we show the restoration plan and explain the deferral.
-	p.Warning("Git operations not yet wired (Phase 5)")
-	fmt.Fprintln(cmd.OutOrStdout(), "  The backup was parsed and validated successfully.")
-	fmt.Fprintln(cmd.OutOrStdout(), "  Actual submodule checkout/reset will be available after Phase 5 integration.")
+	// Resolve project root
+	projectRoot, err := detectProjectRoot()
+	if err != nil {
+		return fmt.Errorf("detecting project root: %w", err)
+	}
+
+	// Create git service
+	gitSvc := git.NewExecGit()
+	ctx := context.Background()
+
+	// Collect previous SHAs for results table
+	previousSHAs := make(map[string]string)
+	for path := range b.Submodules {
+		subDir := filepath.Join(projectRoot, path)
+		sha, shaErr := gitSvc.CurrentSHA(ctx, subDir)
+		if shaErr == nil {
+			previousSHAs[path] = sha
+		}
+	}
+
+	// Interactive confirmation (TTY only, not auto mode)
+	if output.IsTTY() && !autoMode {
+		fmt.Fprintf(cmd.OutOrStdout(), "Restore %d submodule(s) from this backup? [y/N]: ", len(b.Submodules))
+		scanner := bufio.NewScanner(os.Stdin)
+		if !scanner.Scan() {
+			return nil
+		}
+		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
+		if answer != "y" && answer != "yes" {
+			p.Info("Cancelled.")
+			return nil
+		}
+	}
+
+	// Build closure callbacks that adapt GitService to backup function signatures
+	getCurrentStates := func(root string, paths []string) (map[string]backup.SubmoduleState, error) {
+		states := make(map[string]backup.SubmoduleState)
+		for _, path := range paths {
+			subDir := filepath.Join(projectRoot, path)
+			sha, shaErr := gitSvc.CurrentSHA(ctx, subDir)
+			if shaErr != nil {
+				continue
+			}
+			br, brErr := gitSvc.CurrentBranch(ctx, subDir)
+			branch := ""
+			if brErr == nil {
+				branch = br.Name
+			}
+			states[path] = backup.SubmoduleState{
+				SHA:    sha,
+				Branch: branch,
+			}
+		}
+		return states, nil
+	}
+
+	gitCheckout := func(dir, branch string) error {
+		_, err := gitSvc.Checkout(ctx, filepath.Join(projectRoot, dir), branch)
+		return err
+	}
+
+	gitResetHard := func(dir, sha string) error {
+		return gitSvc.ResetHard(ctx, filepath.Join(projectRoot, dir), sha)
+	}
+
+	// Resolve backup directory for safety backup
+	bkDir, bkErr := resolveBackupDir(cmd)
+	if bkErr != nil {
+		bkDir = "" // safety backup will be skipped
+	}
+
+	// Call backup.Rollback with real git callbacks
+	result, err := backup.Rollback(
+		backup.RollbackOpts{
+			BackupPath:  backupPath,
+			ProjectRoot: projectRoot,
+			BackupDir:   bkDir,
+		},
+		getCurrentStates,
+		gitCheckout,
+		gitResetHard,
+	)
+	if err != nil {
+		return fmt.Errorf("rollback failed: %w", err)
+	}
+
+	// Display safety backup info
+	if result.SafetyBackupFile != "" {
+		p.Infof("Safety backup: %s", result.SafetyBackupFile)
+	}
+
+	// Build results table
+	successStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
+
+	t := table.New().
+		Headers("Path", "Branch", "Previous", "Restored", "Status").
+		Border(lipgloss.NormalBorder()).
+		BorderHeader(true).
+		BorderColumn(true).
+		Width(120)
+
+	for _, sub := range result.Submodules {
+		prevSHA := previousSHAs[sub.Path]
+		if len(prevSHA) > 7 {
+			prevSHA = prevSHA[:7]
+		}
+		targetSHA := sub.SHA
+		if len(targetSHA) > 7 {
+			targetSHA = targetSHA[:7]
+		}
+		branch := sub.Branch
+		status := "restored"
+		if sub.Error != nil {
+			status = sub.Error.Error()
+		}
+		t.Row(sub.Path, branch, prevSHA, targetSHA, status)
+	}
+
+	t.StyleFunc(func(row, col int) lipgloss.Style {
+		if row == table.HeaderRow {
+			return tui.HeaderStyle
+		}
+		if col == 4 && row >= 0 && row < len(result.Submodules) {
+			if result.Submodules[row].Error != nil {
+				return errorStyle
+			}
+			return successStyle
+		}
+		return lipgloss.NewStyle()
+	})
+
+	fmt.Fprintln(cmd.OutOrStdout(), t.Render())
+
+	// Summary line
+	total := len(result.Submodules)
+	if result.RestoredCount == total {
+		p.Successf("Restored %d/%d submodule(s)", result.RestoredCount, total)
+	} else {
+		p.Warningf("Restored %d/%d submodule(s)", result.RestoredCount, total)
+	}
 
 	return nil
 }
