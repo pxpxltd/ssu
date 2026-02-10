@@ -28,6 +28,42 @@ An intelligent git submodule management CLI with smart branch detection, interac
 
 ## Installation
 
+### Install Script (recommended)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/pxpxltd/ssu/master/scripts/install.sh | bash
+```
+
+Works on Linux, macOS, FreeBSD, and Windows (MSYS/MinGW/Cygwin). Auto-detects OS and architecture, verifies SHA256 checksum.
+
+To install a specific version:
+
+```bash
+VERSION=v1.0.0 curl -sSL https://raw.githubusercontent.com/pxpxltd/ssu/master/scripts/install.sh | bash
+```
+
+### Homebrew (macOS / Linux)
+
+```bash
+brew install pxpxltd/tap/ssu
+```
+
+### AUR (Arch Linux)
+
+```bash
+yay -S ssu-bin
+```
+
+### Go Install
+
+```bash
+go install github.com/pxpxltd/ssu/cmd/ssu@latest
+```
+
+Requires Go 1.21+. Installs to `$GOPATH/bin` (or `$HOME/go/bin`).
+
+> **Note:** `go install @latest` requires at least one published release. Use an explicit version tag if `@latest` doesn't resolve: `go install github.com/pxpxltd/ssu/cmd/ssu@v1.0.0`
+
 ### From Source
 
 ```bash
@@ -46,13 +82,13 @@ cp ssu ~/.local/bin/
 sudo cp ssu /usr/local/bin/
 ```
 
-### Go Install
+### Pre-built Binaries
 
-```bash
-go install github.com/pxpxltd/ssu/cmd/ssu@latest
-```
-
-This installs ssu to `$GOPATH/bin` (or `$HOME/go/bin`). Version info is populated from VCS metadata automatically.
+Download from [GitHub Releases](https://github.com/pxpxltd/ssu/releases). Archives available for:
+- Linux (amd64, arm64)
+- macOS (amd64, arm64)
+- FreeBSD (amd64, arm64)
+- Windows (amd64, arm64)
 
 ## Build
 
