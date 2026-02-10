@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Commands + TUI** - User-facing commands wired to bubbletea interactive selector
 - [x] **Phase 5.1: Claude Code Integration** - Slash commands and CLAUDE.md snippet for AI-assisted submodule management (INSERTED)
 - [ ] **Phase 6: Distribution** - Cross-platform builds, package managers, and install script
+- [ ] **Phase 7: Complete Rollback** - Wire rollback command with git operations for functional backup restoration
 
 ## Phase Details
 
@@ -136,10 +137,26 @@ Plans:
 - [ ] 06-01-PLAN.md — goreleaser config (builds, archives, checksums, changelog, Homebrew cask, AUR) and GitHub Actions release workflow
 - [ ] 06-02-PLAN.md — curl-pipe-bash install script with OS/arch detection, SHA256 verification, and auto-install
 
+### Phase 7: Complete Rollback
+**Goal**: Wire rollback command with git operations to restore submodules from backups
+**Depends on**: Phase 4, Phase 5
+**Requirements**: SAFE-02 (complete implementation)
+**Gap Closure**: Closes integration gap (Phase 4 → Phase 5) and flow gap (ssu rollback E2E)
+**Plans:** 1 plan
+**Success Criteria** (what must be TRUE):
+  1. `GitService.ResetHard(path, sha)` method exists and executes `git reset --hard <sha>`
+  2. `rollback.go` wires `backup.Rollback()` with git callback functions using GitService
+  3. `ssu rollback <backup-file>` restores submodules to exact SHAs from backup
+  4. Rollback displays results table showing: path, previous SHA, restored SHA, status (success/skipped/error)
+  5. Integration tests verify rollback flow with both go-era and bash-era backup formats
+
+Plans:
+- [ ] 07-01-PLAN.md — Implement GitService.ResetHard, wire rollback command with git callbacks, add integration tests
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 5.1 > 6
+Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 5.1 > 6 > 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -150,3 +167,4 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 5.1 > 6
 | 5. Commands + TUI | 4/4 | Complete | 2026-02-09 |
 | 5.1 Claude Code Integration | 2/2 | Complete | 2026-02-09 |
 | 6. Distribution | 0/2 | Not started | - |
+| 7. Complete Rollback | 0/1 | Not started | - |
