@@ -151,7 +151,7 @@ Plans:
   5. Integration tests verify rollback flow with both go-era and bash-era backup formats
 
 Plans:
-- [ ] 07-01-PLAN.md — Implement GitService.ResetHard, wire rollback command with git callbacks, add integration tests
+- [x] 07-01-PLAN.md — Implement GitService.ResetHard, wire rollback command with git callbacks, add integration tests
 
 ## Progress
 
@@ -166,5 +166,5 @@ Phases execute in numeric order: 1 > 2 > 3 (parallel with 4) > 5 > 5.1 > 6 > 7
 | 4. Config + Safety | 3/3 | Complete | 2026-02-09 |
 | 5. Commands + TUI | 4/4 | Complete | 2026-02-09 |
 | 5.1 Claude Code Integration | 2/2 | Complete | 2026-02-09 |
-| 6. Distribution | 0/2 | Not started | - |
-| 7. Complete Rollback | 0/1 | Not started | - |
+| 6. Distribution | 2/2 | Complete | 2026-02-10 |
+| 7. Complete Rollback | 1/1 | Complete | 2026-02-10 |
