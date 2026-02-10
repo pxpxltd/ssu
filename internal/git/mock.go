@@ -27,6 +27,7 @@ type MockGitService struct {
 	StashFn                  func(ctx context.Context, dir string) (StashResult, error)
 	StashPopFn               func(ctx context.Context, dir string) (StashResult, error)
 	MergeAbortFn             func(ctx context.Context, dir string) error
+	ResetHardFn              func(ctx context.Context, dir, ref string) error
 }
 
 func (m *MockGitService) SubmodulePaths(ctx context.Context, rootDir string) ([]string, error) {
@@ -165,6 +166,13 @@ func (m *MockGitService) StashPop(ctx context.Context, dir string) (StashResult,
 func (m *MockGitService) MergeAbort(ctx context.Context, dir string) error {
 	if m.MergeAbortFn != nil {
 		return m.MergeAbortFn(ctx, dir)
+	}
+	return nil
+}
+
+func (m *MockGitService) ResetHard(ctx context.Context, dir, ref string) error {
+	if m.ResetHardFn != nil {
+		return m.ResetHardFn(ctx, dir, ref)
 	}
 	return nil
 }

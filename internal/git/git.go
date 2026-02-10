@@ -42,6 +42,7 @@ type GitService interface {
 	Stash(ctx context.Context, dir string) (StashResult, error)
 	StashPop(ctx context.Context, dir string) (StashResult, error)
 	MergeAbort(ctx context.Context, dir string) error
+	ResetHard(ctx context.Context, dir, ref string) error
 }
 
 // ---------------------------------------------------------------------------

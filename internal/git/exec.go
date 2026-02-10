@@ -404,6 +404,11 @@ func (g *ExecGit) MergeAbort(ctx context.Context, dir string) error {
 	return err
 }
 
+func (g *ExecGit) ResetHard(ctx context.Context, dir, ref string) error {
+	_, _, err := g.run(ctx, dir, g.Timeouts.Default, "reset", "--hard", ref)
+	return err
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
