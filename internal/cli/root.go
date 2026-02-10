@@ -132,8 +132,7 @@ func detectProjectRoot() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// showInteractiveMenu displays a simple numbered menu for TTY sessions.
-// This is a Phase 1 placeholder -- Bubble Tea replaces it in Phase 5.
+// showInteractiveMenu displays a numbered menu when ssu is run without arguments in a TTY.
 func showInteractiveMenu(cmd *cobra.Command) error {
 	type menuItem struct {
 		name string
