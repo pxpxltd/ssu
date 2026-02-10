@@ -131,9 +131,10 @@ None. All phases complete.
 | 001 | Remove Target column from status table + add progress bar | 2026-02-09 | 18150b4 | [001-remove-target-column](./quick/001-remove-target-column-from-status-table/) |
 | 002 | Green progress bar + informative selector header | 2026-02-09 | 324e153 | [002-green-progress-bar](./quick/002-green-progress-bar-and-selector-header/) |
 | 003 | Exec command fixes: progress bar, select-all, sh -c execution | 2026-02-09 | 8e6fd96 | [003-exec-command-fixes](./quick/003-exec-command-fixes/) |
+| 004 | Release guide (RELEASING.md) + README install methods | 2026-02-10 | f613be5 | [004-release-guide](./quick/004-create-a-proper-release-guide-go-install/) |
 
 ## Session Continuity
 
-Last session: 2026-02-09
-Stopped at: Completed 06-01-PLAN.md (release pipeline) -- ALL PLANS COMPLETE
+Last session: 2026-02-10
+Stopped at: Completed quick task 004 (release guide + install docs)
 Resume file: None
