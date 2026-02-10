@@ -1,425 +1,382 @@
 # SSU - Smart Submodule Updater
 
-An intelligent git submodule updater with smart branch detection, interactive workflows, and robust conflict handling.
+An intelligent git submodule management CLI with smart branch detection, interactive TUI, and robust conflict handling.
 
-[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/yourusername/ssu)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Bash](https://img.shields.io/badge/bash-3.2%2B-orange.svg)](https://www.gnu.org/software/bash/)
+[![Go](https://img.shields.io/badge/go-1.21%2B-blue.svg)](https://go.dev/)
 
 ## Features
 
-- **TUI Interactive Selector** - Navigate with arrow keys, toggle selections with space, visual checkboxes
+- **TUI Interactive Selector** - Navigate with arrow keys, toggle selections with space, filter by name, sort by status
 - **Root Repository Display** - Shows root repository status alongside submodules
-- **Smart Branch Detection** - Automatically detects the best branch to use (develop → master → main → remote default)
-- **Interactive & Batch Modes** - Choose between interactive prompts or fully automated updates
-- **Push Ahead Submodules** - Easily push submodules with unpushed commits
+- **Smart Branch Detection** - Automatically detects the best branch (develop -> master -> main -> remote default)
+- **Interactive & Batch Modes** - Choose between interactive TUI or fully automated updates (`--auto`)
+- **Push Ahead Submodules** - Push submodules with unpushed commits to their tracking branches
+- **Execute Commands** - Run arbitrary commands across submodules (`ssu exec git status`)
 - **Dry-Run Preview** - Preview changes before applying them
-- **Backup & Rollback** - Automatic backups with one-command rollback capability
-- **Intelligent Conflict Handling** - Automatically stash and retry on conflicts
-- **Parallel Fetching** - Fast performance with configurable parallel fetch operations
-- **Cross-Platform** - Compatible with Bash 3.2+ (macOS and Linux)
-- **Feature Branch Detection** - Identifies and warns about non-standard branches
+- **Backup & Rollback** - Automatic backups with one-command rollback
+- **Intelligent Conflict Handling** - Automatically stash, retry, and restore on conflicts
+- **Parallel Fetching** - Configurable parallel fetch with progress bar
+- **Layered Configuration** - YAML config with project, global, env, and CLI flag layers
+- **Shell Completion** - Bash, Zsh, Fish, and PowerShell completion scripts
+- **Claude Code Integration** - Slash commands for AI-assisted submodule management
 
 ## Requirements
 
 - **Git** 2.0 or higher
-- **Bash** 3.2 or higher (macOS compatible)
-- Basic Unix tools (awk, sed, grep)
+- **Go** 1.21 or higher (to build from source)
 
 ## Installation
 
-### Quick Install
+### Install Script (recommended)
 
-Clone the repository and run the installer:
+```bash
+curl -sSL https://raw.githubusercontent.com/pxpxltd/ssu/master/scripts/install.sh | bash
+```
+
+Works on Linux, macOS, FreeBSD, and Windows (MSYS/MinGW/Cygwin). Auto-detects OS and architecture, verifies SHA256 checksum.
+
+To install a specific version:
+
+```bash
+VERSION=v1.0.0 curl -sSL https://raw.githubusercontent.com/pxpxltd/ssu/master/scripts/install.sh | bash
+```
+
+### Homebrew (macOS / Linux)
+
+```bash
+brew install pxpxltd/tap/ssu
+```
+
+### AUR (Arch Linux)
+
+```bash
+yay -S ssu-bin
+```
+
+### Go Install
+
+```bash
+go install github.com/pxpxltd/ssu/cmd/ssu@latest
+```
+
+Requires Go 1.21+. Installs to `$GOPATH/bin` (or `$HOME/go/bin`).
+
+> **Note:** `go install @latest` requires at least one published release. Use an explicit version tag if `@latest` doesn't resolve: `go install github.com/pxpxltd/ssu/cmd/ssu@v1.0.0`
+
+### From Source
 
 ```bash
 git clone https://github.com/pxpxltd/ssu.git
 cd ssu
-./install.sh
+make build
 ```
 
-The installer will guide you through choosing an installation location:
-- `~/.local/bin/ssu` - User-local installation (no sudo required)
-- `/usr/local/bin/ssu` - System-wide installation (requires sudo)
-- `/usr/bin/ssu` - System installation (requires sudo)
-
-### Manual Installation
-
-If you prefer manual installation:
+This produces an `ssu` binary in the project root. Copy it to your PATH:
 
 ```bash
-# Clone the repository
-git clone https://github.com/pxpxltd/ssu.git /opt/ssu
+# User-local
+cp ssu ~/.local/bin/
 
-# Create a symlink in your PATH
-sudo ln -s /opt/ssu/ssu /usr/local/bin/ssu
-
-# Or for user-local installation
-mkdir -p ~/.local/bin
-ln -s /opt/ssu/ssu ~/.local/bin/ssu
-# Make sure ~/.local/bin is in your PATH
+# System-wide
+sudo cp ssu /usr/local/bin/
 ```
 
-### Uninstall
+### Pre-built Binaries
+
+Download from [GitHub Releases](https://github.com/pxpxltd/ssu/releases). Archives available for:
+- Linux (amd64, arm64)
+- macOS (amd64, arm64)
+- FreeBSD (amd64, arm64)
+- Windows (amd64, arm64)
+
+## Build
+
+SSU uses a Makefile with ldflags for version injection:
 
 ```bash
-./install.sh --uninstall
+make build      # Build binary with version/commit/date
+make test       # Run all tests
+make lint       # Run golangci-lint
+make clean      # Remove built binary
 ```
 
-## Usage
-
-### Basic Syntax
+To build manually:
 
 ```bash
-ssu [OPTIONS]
+go build -ldflags "-s -w -X main.version=1.0.0 -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o ssu ./cmd/ssu
 ```
 
-### Options
+## Commands
 
-| Option | Description |
-|--------|-------------|
-| `-h, --help` | Show help message |
-| `-a, --auto` | Batch mode - update all submodules without prompts |
-| `-d, --dry-run` | Preview changes without applying them |
-| `-b, --branch BRANCH` | Override branch for all submodules |
-| `-f, --fail-fast` | Stop on first conflict or error |
-| `-s, --status` | Show status table only (no updates) |
-| `-p, --push` | Push submodules with unpushed commits |
-| `-r, --rollback FILE` | Rollback from backup file |
+SSU uses subcommands. Run `ssu` without arguments for an interactive menu.
 
-### Status Legend
+| Command | Description |
+|---------|-------------|
+| `ssu status` | Show submodule status table |
+| `ssu update` | Fetch and merge updates for submodules |
+| `ssu push` | Push submodules with unpushed commits |
+| `ssu exec <cmd>` | Run a command in selected submodules |
+| `ssu init` | Create `.ssu.yaml` configuration interactively |
+| `ssu rollback [file]` | Restore submodules from a backup |
+| `ssu backup` | List or clean up backup files |
+| `ssu config show` | Display merged configuration with sources |
+| `ssu version` | Print version, commit, build date, and Go version |
+| `ssu completion` | Generate shell completion scripts |
+| `ssu claude` | Claude Code integration (install slash commands, generate snippets) |
 
-The status table uses color-coded indicators:
+### Global Flags
 
+These flags work with any subcommand:
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--auto` | `-a` | Automatic mode - no prompts, for CI/CD |
+| `--dry-run` | `-n` | Preview changes without modifying anything |
+| `--verbose` | `-v` | Enable verbose output |
+| `--jobs N` | `-j N` | Number of parallel fetch jobs (default: 8) |
+
+### Status
+
+View the current state of all submodules:
+
+```bash
+ssu status          # Colorized table
+ssu status --json   # JSON output (for scripting)
+```
+
+The status table shows:
+- **Root repository** status (displayed first as "(root)")
+- Each submodule's current branch, commits behind, and status
+
+Status indicators:
 - **pending** (green) - Has updates available
-- **current** (cyan) - Already up-to-date
+- **current** (cyan) - Already up to date
 - **modified** (yellow) - Has local uncommitted changes
 - **ahead** (magenta) - Has unpushed commits
 - **conflict** (red) - Merge conflict detected
 
-## Examples
+### Update
 
-### Check Submodule Status
-
-View the current state of all submodules without making changes:
+Fetch and merge updates for submodules:
 
 ```bash
-ssu --status
+ssu update              # Interactive - TUI selector to pick submodules
+ssu update --auto       # Batch - update all pending submodules
+ssu update --dry-run    # Preview what would be updated
 ```
 
-This displays a table showing:
-- **Root repository** status (displayed first as "(root)")
-- Each submodule's current branch, how many commits it's behind, and whether it's on a feature branch
+In interactive mode, the TUI selector lets you:
+- **Up/Down** or **j/k** - Navigate
+- **Space** - Toggle selection
+- **a** - Select all, **A** - Deselect all
+- **/** - Filter by name
+- **s** - Cycle sort (path / status / behind)
+- **d** - Toggle detail pane (changelog)
+- **Enter** - Confirm, **q** - Quit
 
-Note: The root repository is display-only and won't be included in update or push operations. Users manage the root repository manually.
+A backup is automatically created before any updates.
 
-### Interactive Update Workflow
+### Push
 
-Run in interactive mode to selectively update submodules:
+Push submodules with unpushed commits:
 
 ```bash
-ssu
+ssu push            # Interactive - select which submodules to push
+ssu push --auto     # Push all ahead submodules
 ```
 
-You'll be prompted to:
-1. View the status table (including root repository status)
-2. Select which submodules to update using the TUI selector:
-   - Use **↑/↓** arrow keys or **j/k** (vim-style) to navigate
-   - Press **Space** to toggle selection on current item
-   - Press **a** to select all, **A** to deselect all
-   - Press **Enter** to confirm, **q** to quit
-3. Review incoming changes for each submodule
-4. Confirm each update individually
+Features:
+- Detects submodules with unpushed commits
+- Sets up tracking branches automatically if needed
+- Skips submodules in detached HEAD state
 
-The TUI provides visual feedback with checkboxes: `[✓]` for selected items, `[ ]` for unselected.
+### Exec
 
-### Batch Update All Submodules
-
-Automatically update all submodules without prompts:
+Run an arbitrary command in submodules:
 
 ```bash
-ssu --auto
+ssu exec git status                 # Multi-arg form
+ssu exec 'git log --oneline -5'    # Quoted shell command
+ssu exec --auto npm install         # All submodules, no selector
+ssu exec ls -la
 ```
 
-This is useful in CI/CD pipelines or when you want to quickly sync all submodules.
+In interactive mode, all submodules are pre-selected. Deselect the ones you want to skip.
 
-### Dry-Run Preview
+### Rollback
 
-Preview what would be updated without making any changes:
+Restore submodules to a previous state from a backup:
 
 ```bash
-ssu --dry-run
+ssu rollback                                # List recent backups
+ssu rollback backup-20260209-103000.json    # Restore from file
+ssu rollback --dry-run backup.json          # Preview restore
 ```
 
-This shows which submodules have updates and displays the incoming commits.
+A safety backup is automatically created before restoring.
 
-### Push Ahead Submodules
-
-When submodules have unpushed commits (shown as "ahead" in the status table), you can push them with:
+### Backup Management
 
 ```bash
-# Interactive mode - select which submodules to push
-ssu --push
-
-# Batch mode - push all ahead submodules automatically
-ssu --push --auto
-
-# Preview what would be pushed without actually pushing
-ssu --push --dry-run
+ssu backup              # List available backups
+ssu backup list         # Same as above
+ssu backup clean --keep 5     # Keep 5 most recent
+ssu backup clean --keep 7d    # Keep last 7 days
 ```
 
-This is useful when you've made commits in multiple submodules and want to push them all at once. The script will:
-- Detect submodules with unpushed commits
-- Push to their tracking branches (or set up tracking if needed)
-- Skip submodules in detached HEAD state
-- Handle errors gracefully
+### Init
 
-### Force Specific Branch
-
-Override the smart branch detection and force all submodules to use a specific branch:
+Create a `.ssu.yaml` config file interactively:
 
 ```bash
-ssu --branch develop
+ssu init
 ```
 
-This is useful when you want all submodules on the same branch (e.g., for testing).
-
-### Stop on First Error
-
-Exit immediately if any submodule encounters a conflict or error:
+### Shell Completion
 
 ```bash
-ssu --auto --fail-fast
-```
+# Bash
+source <(ssu completion bash)
 
-This is useful in automated scripts where you want to catch problems immediately.
+# Zsh
+ssu completion zsh > "${fpath[1]}/_ssu"
 
-### Rollback After Issues
-
-If an update causes problems, rollback to the previous state:
-
-```bash
-# Find the backup file (created before updates)
-ls ~/.ssu/your-project-name/.submodule-backup-*.json
-
-# Rollback to that state
-ssu --rollback ~/.ssu/your-project-name/.submodule-backup-20240315-143022.json
-```
-
-**Backups are automatically created before any updates** and stored in `~/.ssu/<project-name>/`.
-
-On first run, you'll be prompted to create the backup directory. If you decline, the script will proceed without creating backups (not recommended).
-
-### Combined Options
-
-Combine options for powerful workflows:
-
-```bash
-# Preview automatic update on develop branch
-ssu --auto --branch develop --dry-run
-
-# Force all to master and stop on first problem
-ssu --auto --branch master --fail-fast
+# Fish
+ssu completion fish > ~/.config/fish/completions/ssu.fish
 ```
 
 ## Configuration
 
-### Skip List
+SSU loads configuration in priority order (highest wins):
 
-To skip specific submodules, edit the `SKIP_LIST` array in the `ssu` script:
+1. **CLI flags** (`--jobs`, `--verbose`, etc.)
+2. **Environment variables** (`SSU_GIT_PARALLEL_JOBS`, etc.)
+3. **Project config** (`.ssu.yaml` in project root)
+4. **Global config** (`~/.ssu/config.yaml`)
+5. **Built-in defaults**
 
-```bash
-SKIP_LIST=(
-    "plugins/deprecated-module"
-    "vendor/legacy-lib"
-)
+Use `ssu config show` to see the merged configuration and which layer set each value.
+
+### Example `.ssu.yaml`
+
+```yaml
+git:
+  parallel_jobs: 8
+  fail_fast: false
+  skip:
+    - plugins/deprecated-module
+    - vendor/legacy-lib
+
+branches:
+  priority:
+    - develop
+    - master
+    - main
+  # override: staging    # Force all submodules to this branch
+
+backup:
+  enabled: true
+  max_backups: 10
+
+log:
+  max_size_mb: 10
+  max_backups: 5
 ```
 
-### Branch Priority
+### Environment Variables
 
-Customize the branch detection order by editing `BRANCH_PRIORITY`:
-
-```bash
-BRANCH_PRIORITY=("develop" "master" "main")
-```
-
-The script will try branches in this order, falling back to the remote's default branch.
-
-### Parallel Jobs
-
-Control the number of parallel fetch operations:
+All config keys can be set via environment variables with the `SSU_` prefix:
 
 ```bash
-# Set environment variable (default is 8)
-export PARALLEL_JOBS=16
-ssu --auto
-
-# Or inline
-PARALLEL_JOBS=4 ssu --status
+SSU_GIT_PARALLEL_JOBS=16 ssu status
+SSU_BRANCHES_OVERRIDE=staging ssu update --auto
 ```
 
-Higher values speed up fetching but use more network connections.
+The legacy `PARALLEL_JOBS` variable (without prefix) is also supported for backward compatibility.
 
 ## Backups
 
-SSU automatically creates backups before performing any updates to ensure you can rollback if needed.
+SSU automatically creates backups before any update or rollback operation.
 
 ### Backup Location
 
-Backups are stored in: `~/.ssu/<project-name>/.submodule-backup-YYYYMMDD-HHMMSS.json`
-
-Where `<project-name>` is the name of your project's root directory. For example:
-- Project at `/home/user/my-app` → Backups in `~/.ssu/my-app/`
-- Project at `/opt/wordpress` → Backups in `~/.ssu/wordpress/`
-
-### First Run
-
-On the first run, SSU will:
-1. Check if `~/.ssu` directory exists (creates it if needed)
-2. Check if `~/.ssu/<project-name>` exists
-3. In **interactive mode**: prompt you to create the directory
-4. In **auto mode** (`--auto`): automatically create the directory
-
-If you decline to create the backup directory, SSU will proceed without creating backups for that session.
-
-### Managing Backups
-
-```bash
-# List all backups for your project
-ls -lh ~/.ssu/your-project-name/
-
-# View backup contents
-cat ~/.ssu/your-project-name/.submodule-backup-20240315-143022.json
-
-# Clean up old backups
-find ~/.ssu/your-project-name/ -name ".submodule-backup-*.json" -mtime +30 -delete
+```
+~/.ssu/<project-name>/backups/backup-YYYYMMDD-HHMMSS.json
 ```
 
-### Rollback
+Where `<project-name>` is the name of your project's root directory.
 
-To restore submodules to a previous state:
+### Backup Format
 
-```bash
-ssu --rollback ~/.ssu/your-project-name/.submodule-backup-YYYYMMDD-HHMMSS.json
+```json
+{
+  "timestamp": "2026-02-09T10:30:00Z",
+  "submodules": {
+    "plugins/module1": {"sha": "abc1234", "branch": "develop"},
+    "plugins/module2": {"sha": "def5678", "branch": "main"}
+  }
+}
 ```
 
-The rollback will restore all submodules to their exact commit SHAs from the backup. Note that this may leave submodules in detached HEAD state.
+## Logging
 
-## Troubleshooting
-
-### Merge Conflicts
-
-If a submodule has merge conflicts:
-
-1. SSU automatically tries to stash local changes and retry
-2. If that fails, the conflict is reported
-3. Manually resolve the conflict:
-   ```bash
-   cd path/to/submodule
-   git status
-   # Resolve conflicts manually
-   git add .
-   git merge --continue
-   ```
-4. Or rollback to the previous state:
-   ```bash
-   ssu --rollback ~/.ssu/your-project-name/.submodule-backup-*.json
-   ```
-
-### Detached HEAD State
-
-If a submodule is in detached HEAD:
-
-1. SSU will attempt to checkout the appropriate branch
-2. If you want to keep changes:
-   ```bash
-   cd path/to/submodule
-   git checkout -b my-feature-branch
-   git push -u origin my-feature-branch
-   ```
-
-### Permission Errors
-
-If you encounter permission errors:
-
-1. Check that submodule directories are writable
-2. Ensure you have network access to fetch from remotes
-3. Verify SSH keys or credentials are configured for Git
-
-### Log Files
-
-All operations are logged to:
+Operations are logged to:
 
 ```
 ~/.ssu/<project-name>/logs/submodule-update.log
 ```
 
-This keeps the project directory clean. Check this file for detailed information about what happened during an update.
+Log rotation is automatic (configurable via `log.max_size_mb` and `log.max_backups`).
 
-### Feature Branch Warning
+## Troubleshooting
 
-If a submodule is on a feature branch (not develop/master/main):
+### Merge Conflicts
 
-- SSU marks it as "FEATURE: Yes" in the status table
-- In interactive mode, you'll see which submodules are on feature branches
-- Use `--branch` to override if needed, but be careful not to lose work
+SSU automatically tries to resolve conflicts by stashing local changes and retrying. If that fails:
+
+```bash
+cd path/to/submodule
+git status
+# Resolve conflicts manually
+git add .
+git merge --continue
+```
+
+Or rollback:
+
+```bash
+ssu rollback
+```
+
+### Detached HEAD
+
+If a submodule is in detached HEAD state, push operations will skip it. To fix:
+
+```bash
+cd path/to/submodule
+git checkout -b my-branch
+git push -u origin my-branch
+```
 
 ### Common Issues
 
-**"No .gitmodules found"**
-- You're not in a repository root that contains submodules
-- Run `cd` to your project root directory
+**"No submodules found"**
+- Ensure you're in a git repository root with `.gitmodules`
+- Run `git submodule init && git submodule update` if submodules aren't initialized
 
-**"Not initialized" status**
-- Run `git submodule update --init` first
-- Or `git submodule init && git submodule update`
-
-**Fetch fails**
-- Check network connectivity
-- Verify you have access to the remote repositories
-- Check SSH keys: `ssh -T git@github.com`
+**Network errors during fetch**
+- Check connectivity and SSH keys: `ssh -T git@github.com`
+- Reduce parallel jobs: `ssu status -j 4`
 
 ## Contributing
 
-Contributions are welcome! Here's how you can help:
-
-### Reporting Issues
-
-1. Check existing issues first
-2. Provide the output of `ssu --status`
-3. Include relevant log entries from `~/.ssu/<project-name>/logs/submodule-update.log`
-4. Describe your environment (OS, Bash version, Git version)
-
-### Pull Requests
-
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Test on both macOS and Linux if possible
-5. Ensure Bash 3.2 compatibility (no associative arrays, no `[[`, etc.)
-6. Update documentation if needed
-7. Submit a pull request
-
-### Code Style
-
-- Use Bash 3.2 compatible syntax
-- Follow existing indentation (4 spaces)
-- Add comments for complex logic
-- Use meaningful variable names
-- Test thoroughly before submitting
+2. Create a feature branch
+3. Run tests: `make test`
+4. Run linter: `make lint`
+5. Submit a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Inspired by the need for better submodule management workflows
-- Built with compatibility in mind for macOS and Linux environments
-- Thanks to all contributors who help improve this tool
-
-## Links
-
-- [GitHub Repository](https://github.com/yourusername/ssu)
-- [Issue Tracker](https://github.com/yourusername/ssu/issues)
-- [Git Submodules Documentation](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
+MIT - see [LICENSE](LICENSE) for details.

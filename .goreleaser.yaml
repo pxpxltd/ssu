@@ -1,0 +1,90 @@
+version: 2
+
+builds:
+  - main: ./cmd/ssu
+    binary: ssu
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - freebsd
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: pxpxltd
+    name: ssu
+  prerelease: auto
+  name_template: "v{{.Version}}"
+
+homebrew_casks:
+  - name: ssu
+    binaries:
+      - ssu
+    repository:
+      owner: pxpxltd
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/pxpxltd/ssu"
+    description: "Smart Submodule Updater - intelligent git submodule management"
+    skip_upload: auto
+
+aurs:
+  - name: ssu-bin
+    homepage: "https://github.com/pxpxltd/ssu"
+    description: "Smart Submodule Updater - intelligent git submodule management"
+    maintainers:
+      - "pxpxltd"
+    license: "MIT"
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/ssu-bin.git"
+    depends:
+      - git
+    package: |-
+      install -Dm755 "./ssu" "${pkgdir}/usr/bin/ssu"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/ssu/LICENSE"
+    skip_upload: auto
+    commit_msg_template: "Update to {{ .Tag }}"
