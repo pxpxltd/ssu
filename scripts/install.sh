@@ -285,7 +285,7 @@ main() {
 
     local tmpdir
     tmpdir="$(mktemp -d)"
-    trap 'rm -rf "$tmpdir"' EXIT
+    trap "rm -rf \"$tmpdir\"" EXIT
 
     ARCHIVE_FILENAME=""
     download "$tmpdir" "$os" "$arch" "$version"
