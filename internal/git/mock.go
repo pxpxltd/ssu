@@ -28,6 +28,11 @@ type MockGitService struct {
 	StashPopFn               func(ctx context.Context, dir string) (StashResult, error)
 	MergeAbortFn             func(ctx context.Context, dir string) error
 	ResetHardFn              func(ctx context.Context, dir, ref string) error
+	DiffIndexFn              func(ctx context.Context, dir string) ([]string, error)
+	StageFilesFn             func(ctx context.Context, dir string, paths []string) error
+	CommitFn                 func(ctx context.Context, dir, message string) (CommitResult, error)
+	ListTagsFn               func(ctx context.Context, dir string, limit int) ([]string, error)
+	CreateTagFn              func(ctx context.Context, dir string, opts TagOpts) error
 }
 
 func (m *MockGitService) SubmodulePaths(ctx context.Context, rootDir string) ([]string, error) {
@@ -173,6 +178,41 @@ func (m *MockGitService) MergeAbort(ctx context.Context, dir string) error {
 func (m *MockGitService) ResetHard(ctx context.Context, dir, ref string) error {
 	if m.ResetHardFn != nil {
 		return m.ResetHardFn(ctx, dir, ref)
+	}
+	return nil
+}
+
+func (m *MockGitService) DiffIndex(ctx context.Context, dir string) ([]string, error) {
+	if m.DiffIndexFn != nil {
+		return m.DiffIndexFn(ctx, dir)
+	}
+	return nil, nil
+}
+
+func (m *MockGitService) StageFiles(ctx context.Context, dir string, paths []string) error {
+	if m.StageFilesFn != nil {
+		return m.StageFilesFn(ctx, dir, paths)
+	}
+	return nil
+}
+
+func (m *MockGitService) Commit(ctx context.Context, dir, message string) (CommitResult, error) {
+	if m.CommitFn != nil {
+		return m.CommitFn(ctx, dir, message)
+	}
+	return CommitResult{SHA: "abc1234"}, nil
+}
+
+func (m *MockGitService) ListTags(ctx context.Context, dir string, limit int) ([]string, error) {
+	if m.ListTagsFn != nil {
+		return m.ListTagsFn(ctx, dir, limit)
+	}
+	return nil, nil
+}
+
+func (m *MockGitService) CreateTag(ctx context.Context, dir string, opts TagOpts) error {
+	if m.CreateTagFn != nil {
+		return m.CreateTagFn(ctx, dir, opts)
 	}
 	return nil
 }

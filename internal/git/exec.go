@@ -410,6 +410,100 @@ func (g *ExecGit) ResetHard(ctx context.Context, dir, ref string) error {
 }
 
 // ---------------------------------------------------------------------------
+// Root repository operations
+// ---------------------------------------------------------------------------
+
+func (g *ExecGit) DiffIndex(ctx context.Context, dir string) ([]string, error) {
+	// Get unstaged changes.
+	unstaged, _, err1 := g.run(ctx, dir, g.Timeouts.Default, "diff", "--name-only")
+	// Get staged changes.
+	staged, _, err2 := g.run(ctx, dir, g.Timeouts.Default, "diff", "--cached", "--name-only")
+
+	// Union both sets.
+	seen := make(map[string]bool)
+	var paths []string
+
+	add := func(output string) {
+		if output == "" {
+			return
+		}
+		for _, line := range strings.Split(output, "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" && !seen[line] {
+				seen[line] = true
+				paths = append(paths, line)
+			}
+		}
+	}
+
+	if err1 == nil {
+		add(unstaged)
+	}
+	if err2 == nil {
+		add(staged)
+	}
+
+	// If both commands failed, return the first error.
+	if err1 != nil && err2 != nil {
+		return nil, err1
+	}
+
+	sort.Strings(paths)
+	return paths, nil
+}
+
+func (g *ExecGit) StageFiles(ctx context.Context, dir string, paths []string) error {
+	if len(paths) == 0 {
+		return nil
+	}
+	args := append([]string{"add", "--"}, paths...)
+	_, _, err := g.run(ctx, dir, g.Timeouts.Default, args...)
+	return err
+}
+
+func (g *ExecGit) Commit(ctx context.Context, dir, message string) (CommitResult, error) {
+	_, stderr, err := g.run(ctx, dir, g.Timeouts.Default, "commit", "-m", message)
+	if err != nil {
+		return CommitResult{Stderr: stderr}, err
+	}
+
+	// Get the short SHA of the new commit.
+	sha, _, shaErr := g.run(ctx, dir, g.Timeouts.Default, "rev-parse", "--short", "HEAD")
+	if shaErr != nil {
+		// Commit succeeded but SHA lookup failed -- return what we have.
+		return CommitResult{Stderr: stderr}, nil
+	}
+
+	return CommitResult{SHA: sha, Stderr: stderr}, nil
+}
+
+func (g *ExecGit) ListTags(ctx context.Context, dir string, limit int) ([]string, error) {
+	stdout, _, err := g.run(ctx, dir, g.Timeouts.Default, "tag", "--sort=-v:refname")
+	if err != nil {
+		// No tags is not an error.
+		if isGitExitError(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if stdout == "" {
+		return nil, nil
+	}
+
+	lines := strings.Split(stdout, "\n")
+	if limit > 0 && len(lines) > limit {
+		lines = lines[:limit]
+	}
+	return lines, nil
+}
+
+func (g *ExecGit) CreateTag(ctx context.Context, dir string, opts TagOpts) error {
+	args := []string{"tag", "-a", opts.Name, "-m", opts.Message}
+	_, _, err := g.run(ctx, dir, g.Timeouts.Default, args...)
+	return err
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

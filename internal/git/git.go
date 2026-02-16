@@ -43,6 +43,13 @@ type GitService interface {
 	StashPop(ctx context.Context, dir string) (StashResult, error)
 	MergeAbort(ctx context.Context, dir string) error
 	ResetHard(ctx context.Context, dir, ref string) error
+
+	// Root repository operations
+	DiffIndex(ctx context.Context, dir string) ([]string, error)
+	StageFiles(ctx context.Context, dir string, paths []string) error
+	Commit(ctx context.Context, dir, message string) (CommitResult, error)
+	ListTags(ctx context.Context, dir string, limit int) ([]string, error)
+	CreateTag(ctx context.Context, dir string, opts TagOpts) error
 }
 
 // ---------------------------------------------------------------------------
@@ -118,6 +125,18 @@ type PushOpts struct {
 	Remote      string
 	Branch      string
 	SetUpstream bool
+}
+
+// CommitResult holds the outcome of a git commit.
+type CommitResult struct {
+	SHA    string // Short SHA of the new commit
+	Stderr string
+}
+
+// TagOpts configures a git tag creation.
+type TagOpts struct {
+	Name    string // Tag name (e.g. "v1.2.3")
+	Message string // Annotation message
 }
 
 // BranchDetectOpts configures the smart branch detection algorithm.

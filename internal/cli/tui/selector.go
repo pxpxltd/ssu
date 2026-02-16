@@ -608,6 +608,18 @@ func (m SelectorModel) Selected() []*engine.SubmoduleInfo {
 	return result
 }
 
+// SelectedPaths returns the Path() of all selected items regardless of concrete type.
+func (m SelectorModel) SelectedPaths() []string {
+	var paths []string
+	for idx, sel := range m.allSelected {
+		if !sel || idx < 0 || idx >= len(m.items) {
+			continue
+		}
+		paths = append(paths, m.items[idx].Path())
+	}
+	return paths
+}
+
 // Cancelled reports whether the user cancelled selection.
 func (m SelectorModel) Cancelled() bool { return m.cancelled }
 

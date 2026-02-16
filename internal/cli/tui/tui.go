@@ -142,3 +142,45 @@ func FilterAhead() func(SelectorItem) bool {
 		return si.Info.HasStatus(git.StatusAhead)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// ChangedSubmoduleItem for the project command's commit selector.
+// ---------------------------------------------------------------------------
+
+// ChangedSubmoduleItem implements SelectorItem for submodule paths with
+// changed pointer commits (used by the project command).
+type ChangedSubmoduleItem struct {
+	SubPath  string
+	IsStaged bool
+}
+
+// Path returns the submodule path.
+func (c ChangedSubmoduleItem) Path() string { return c.SubPath }
+
+// Label returns the submodule path for display.
+func (c ChangedSubmoduleItem) Label() string { return c.SubPath }
+
+// Metadata returns a status indicator.
+func (c ChangedSubmoduleItem) Metadata() string {
+	if c.IsStaged {
+		return StatusPendingStyle.Render("staged")
+	}
+	return StatusModifiedStyle.Render("modified")
+}
+
+// DetailContent returns a short description for the detail pane.
+func (c ChangedSubmoduleItem) DetailContent() string {
+	if c.IsStaged {
+		return "Submodule pointer already staged for commit"
+	}
+	return "Submodule pointer changed (will be staged)"
+}
+
+// ChangedSubmoduleItems creates SelectorItems from a list of changed submodule paths.
+func ChangedSubmoduleItems(paths []string, staged map[string]bool) []SelectorItem {
+	items := make([]SelectorItem, len(paths))
+	for i, p := range paths {
+		items[i] = ChangedSubmoduleItem{SubPath: p, IsStaged: staged[p]}
+	}
+	return items
+}
