@@ -116,6 +116,7 @@ SSU uses subcommands. Run `ssu` without arguments for an interactive menu.
 | `ssu status` | Show submodule status table |
 | `ssu update` | Fetch and merge updates for submodules |
 | `ssu push` | Push submodules with unpushed commits |
+| `ssu project` | Commit submodule pointer changes in the root repo |
 | `ssu exec <cmd>` | Run a command in selected submodules |
 | `ssu init` | Create `.ssu.yaml` configuration interactively |
 | `ssu rollback [file]` | Restore submodules from a backup |
@@ -190,6 +191,23 @@ Features:
 - Detects submodules with unpushed commits
 - Sets up tracking branches automatically if needed
 - Skips submodules in detached HEAD state
+
+### Project
+
+Commit changed submodule pointers in the root repository and optionally create a semver tag. Only submodule pointer changes are staged -- other modified files in the root repo are left untouched.
+
+```bash
+ssu project                      # Interactive: select submodules, prompt for message
+ssu project -m "chore: bump"     # Interactive select, use provided message
+ssu project --auto               # Stage all changed submodules, auto-generate message
+ssu project --auto -m "msg"      # Stage all, use provided message
+ssu project --tag                # Interactive commit + tag flow
+ssu project --tag --auto         # Auto commit + auto-increment patch tag
+ssu project --dry-run            # Preview what would be committed
+ssu project --dry-run --tag      # Preview including tag suggestion
+```
+
+When `--tag` is used, SSU finds the latest semver tag (e.g. `v1.2.3`) and suggests the next patch version (`v1.2.4`). If no semver tags exist, it suggests `v0.0.1`. In interactive mode you can accept or override the suggestion.
 
 ### Exec
 
