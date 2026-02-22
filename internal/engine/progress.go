@@ -14,12 +14,13 @@ const (
 
 // ProgressEvent carries information about scan/update/push progress.
 type ProgressEvent struct {
-	Type  ProgressEventType // Started, Completed, or Failed
-	Path  string            // Submodule path (or "." for root)
-	Phase string            // "fetch", "status", "update", "push"
-	Error error             // Non-nil for EventFailed
-	Total int               // Total number of items being processed
-	Done  int               // Number of items completed so far
+	Type   ProgressEventType // Started, Completed, or Failed
+	Path   string            // Submodule path (or "." for root)
+	Phase  string            // "fetch", "status", "update", "push"
+	Error  error             // Non-nil for EventFailed
+	Total  int               // Total number of items being processed
+	Done   int               // Number of items completed so far
+	Action string            // Human-readable result (e.g. "pushed", "merged 3 commits")
 }
 
 // ProgressFunc is a callback that receives progress events during operations.

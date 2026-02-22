@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -100,7 +99,7 @@ func runUpdate(cmd *cobra.Command, _ []string) error {
 	}
 
 	// --- Branch: interactive TUI mode ---
-	return runUpdateInteractive(ctx, cancel, eng, gitSvc, scanOpts, rootDir, verbose, pr, cmd, cfg)
+	return runUpdateInteractive(ctx, eng, gitSvc, scanOpts, rootDir, pr, cmd, cfg)
 }
 
 // ---------------------------------------------------------------------------
@@ -209,9 +208,9 @@ func runUpdateAuto(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit,
 // Interactive TUI mode
 // ---------------------------------------------------------------------------
 
-func runUpdateInteractive(ctx context.Context, cancel context.CancelFunc, eng *engine.Engine, gitSvc *git.ExecGit, scanOpts engine.ScanOpts, rootDir string, verbose bool, pr *output.Printer, cmd *cobra.Command, cfg *config.Config) error {
-	// Phase A: Scan with progress bar.
-	scanResult, err := runScanWithProgress(ctx, eng, scanOpts)
+func runUpdateInteractive(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit, scanOpts engine.ScanOpts, rootDir string, pr *output.Printer, cmd *cobra.Command, cfg *config.Config) error {
+	// Phase A: Scan with spinner.
+	scanResult, err := runScanWithSpinner(ctx, eng, scanOpts)
 	if err != nil {
 		if err == context.Canceled {
 			pr.Warning("Scan cancelled.")
@@ -257,51 +256,63 @@ func runUpdateInteractive(ctx context.Context, cancel context.CancelFunc, eng *e
 		return nil
 	}
 
-	// Phase C: Update with result streaming.
+	// Phase C: Update with live multi-line status.
 	// Create backup before updating.
 	if err := createBackupIfEnabled(ctx, gitSvc, rootDir, targets, cfg); err != nil {
 		pr.Warningf("Backup failed: %v (continuing with update)", err)
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Updating %d submodule(s)...\n", len(targets))
-
-	// Set up signal handler for Ctrl+C during update.
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
-	go func() {
-		<-sigCh
-		cancel()
-	}()
-	defer signal.Stop(sigCh)
+	// Build ProcessModel with target paths.
+	paths := make([]string, len(targets))
+	for i, t := range targets {
+		paths[i] = t.Path
+	}
+	pm := tui.NewProcessModel(paths, "update")
+	p3 := tea.NewProgram(pm)
 
 	updateOpts := engine.UpdateOpts{
 		RootDir:     rootDir,
 		Concurrency: scanOpts.Concurrency,
 		OnProgress: func(evt engine.ProgressEvent) {
-			switch evt.Type {
-			case engine.EventCompleted:
-				pr.Successf("%s (%d/%d)", evt.Path, evt.Done, evt.Total)
-			case engine.EventFailed:
-				pr.Errorf("%s (%d/%d): %v", evt.Path, evt.Done, evt.Total, evt.Error)
-			}
+			p3.Send(tui.ProcessItemMsg{
+				Type:   evt.Type,
+				Path:   evt.Path,
+				Action: evt.Action,
+				Err:    evt.Error,
+				Done:   evt.Done,
+				Total:  evt.Total,
+			})
 		},
 	}
 
-	updateResult, err := eng.Update(ctx, targets, updateOpts)
+	go func() {
+		result, err := eng.Update(ctx, targets, updateOpts)
+		p3.Send(tui.ProcessCompleteMsg{Result: result, Err: err})
+	}()
+
+	finalModel, err = p3.Run()
 	if err != nil {
-		// Context cancellation: show partial results.
-		if ctx.Err() == context.Canceled && updateResult != nil {
-			printPartialResults(cmd, pr, updateResult, len(targets))
-			return &exitError{code: ExitError}
-		}
-		return fmt.Errorf("updating submodules: %w", err)
+		return fmt.Errorf("process TUI: %w", err)
 	}
 
-	// Check for context cancellation even if Update returned without error
-	// (it may have completed some updates before cancellation).
-	if ctx.Err() == context.Canceled {
-		printPartialResults(cmd, pr, updateResult, len(targets))
-		return &exitError{code: ExitError}
+	pm2, ok := finalModel.(tui.ProcessModel)
+	if !ok {
+		return fmt.Errorf("unexpected model type from process TUI")
+	}
+
+	if pm2.Err() != nil {
+		if pm2.Err() == context.Canceled {
+			if res, ok := pm2.Result().(*engine.UpdateResult); ok && res != nil {
+				printPartialResults(cmd, pr, res, len(targets))
+			}
+			return &exitError{code: ExitError}
+		}
+		return pm2.Err()
+	}
+
+	updateResult, ok := pm2.Result().(*engine.UpdateResult)
+	if !ok {
+		return fmt.Errorf("unexpected result type from process model")
 	}
 
 	return printUpdateSummary(cmd, pr, updateResult)
@@ -311,35 +322,18 @@ func runUpdateInteractive(ctx context.Context, cancel context.CancelFunc, eng *e
 // TUI scan with progress bar
 // ---------------------------------------------------------------------------
 
-func runScanWithProgress(ctx context.Context, eng *engine.Engine, scanOpts engine.ScanOpts) (*engine.ScanResult, error) {
-	// Determine total count: we don't know until SubmodulePaths is called,
-	// but the progress model can update its total dynamically.
-	pm := tui.NewProgressModel(0)
-	p := tea.NewProgram(pm)
+func runScanWithSpinner(ctx context.Context, eng *engine.Engine, scanOpts engine.ScanOpts) (*engine.ScanResult, error) {
+	sm := tui.NewSpinnerModel()
+	p := tea.NewProgram(sm)
 
 	// Wire scan progress to TUI.
 	scanOpts.OnProgress = func(evt engine.ProgressEvent) {
-		switch evt.Type {
-		case engine.EventStarted:
-			p.Send(tui.FetchProgressMsg{
-				Path:  evt.Path,
-				Done:  evt.Done,
-				Total: evt.Total,
-			})
-		case engine.EventCompleted:
-			p.Send(tui.FetchProgressMsg{
-				Path:  evt.Path,
-				Done:  evt.Done,
-				Total: evt.Total,
-			})
-		case engine.EventFailed:
-			p.Send(tui.FetchProgressMsg{
-				Path:  evt.Path,
-				Done:  evt.Done,
-				Total: evt.Total,
-				Err:   evt.Error,
-			})
-		}
+		p.Send(tui.FetchProgressMsg{
+			Path:  evt.Path,
+			Done:  evt.Done,
+			Total: evt.Total,
+			Err:   evt.Error,
+		})
 	}
 
 	// Run scan in goroutine, sending completion to TUI.
@@ -351,21 +345,21 @@ func runScanWithProgress(ctx context.Context, eng *engine.Engine, scanOpts engin
 	// Run TUI -- blocks until FetchCompleteMsg arrives.
 	finalModel, err := p.Run()
 	if err != nil {
-		return nil, fmt.Errorf("progress bar: %w", err)
+		return nil, fmt.Errorf("spinner: %w", err)
 	}
 
-	pm2, ok := finalModel.(tui.ProgressModel)
+	sm2, ok := finalModel.(tui.SpinnerModel)
 	if !ok {
-		return nil, fmt.Errorf("unexpected model type from progress")
+		return nil, fmt.Errorf("unexpected model type from spinner")
 	}
 
-	if pm2.Err() != nil {
-		return nil, pm2.Err()
+	if sm2.Err() != nil {
+		return nil, sm2.Err()
 	}
 
-	result, ok := pm2.Result().(*engine.ScanResult)
+	result, ok := sm2.Result().(*engine.ScanResult)
 	if !ok {
-		return nil, fmt.Errorf("unexpected result type from progress model")
+		return nil, fmt.Errorf("unexpected result type from spinner model")
 	}
 
 	return result, nil

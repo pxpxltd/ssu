@@ -68,9 +68,9 @@ func (e *Engine) Update(ctx context.Context, targets []*SubmoduleInfo, opts Upda
 			mu.Unlock()
 
 			if action.Error != nil {
-				fire(ProgressEvent{Type: EventFailed, Path: info.Path, Phase: "update", Error: action.Error, Total: total, Done: d})
+				fire(ProgressEvent{Type: EventFailed, Path: info.Path, Phase: "update", Error: action.Error, Total: total, Done: d, Action: action.Action})
 			} else {
-				fire(ProgressEvent{Type: EventCompleted, Path: info.Path, Phase: "update", Total: total, Done: d})
+				fire(ProgressEvent{Type: EventCompleted, Path: info.Path, Phase: "update", Total: total, Done: d, Action: action.Action})
 			}
 			return nil // continue-on-error
 		})

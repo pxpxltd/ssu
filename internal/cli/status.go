@@ -78,7 +78,7 @@ func runStatus(cmd *cobra.Command, _ []string) error {
 
 	var result *engine.ScanResult
 	if !jsonFlag && output.IsTTY() {
-		result, err = runScanWithProgress(cmd.Context(), eng, scanOpts)
+		result, err = runScanWithSpinner(cmd.Context(), eng, scanOpts)
 	} else {
 		result, err = eng.Scan(cmd.Context(), scanOpts)
 	}

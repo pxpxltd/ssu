@@ -92,7 +92,7 @@ func runExec(cmd *cobra.Command, args []string) error {
 	// Scan submodules to get the full list.
 	var result *engine.ScanResult
 	if isTTY && !autoMode {
-		result, err = runScanWithProgress(ctx, eng, scanOpts)
+		result, err = runScanWithSpinner(ctx, eng, scanOpts)
 	} else {
 		result, err = eng.Scan(ctx, scanOpts)
 	}

@@ -154,17 +154,13 @@ func runPushAuto(ctx context.Context, cmd *cobra.Command, eng *engine.Engine, pr
 
 // runPushInteractive runs the 3-phase TUI flow: scan -> select -> push.
 func runPushInteractive(ctx context.Context, cmd *cobra.Command, eng *engine.Engine, pr *output.Printer, scanOpts engine.ScanOpts) error {
-	// Phase A: Scan with progress bar.
-	total := 0
-	scanOpts.OnProgress = func(evt engine.ProgressEvent) {
-		if evt.Total > total {
-			total = evt.Total
-		}
-	}
-
-	// Do a quick pre-scan to get the total count for the progress model.
-	result, err := eng.Scan(ctx, scanOpts)
+	// Phase A: Scan with spinner.
+	result, err := runScanWithSpinner(ctx, eng, scanOpts)
 	if err != nil {
+		if err == context.Canceled {
+			pr.Warning("Scan cancelled.")
+			return nil
+		}
 		return fmt.Errorf("scanning submodules: %w", err)
 	}
 
@@ -215,31 +211,68 @@ func runPushInteractive(ctx context.Context, cmd *cobra.Command, eng *engine.Eng
 
 	slog.Info("push: interactive mode", "selected", len(selected))
 
-	// Phase C: Push selected submodules with result streaming.
+	// Phase C: Push with live multi-line status.
+	paths := make([]string, len(selected))
+	for i, s := range selected {
+		paths[i] = s.Path
+	}
+	pm := tui.NewProcessModel(paths, "push")
+	p3 := tea.NewProgram(pm)
+
 	pushOpts := engine.PushOpts{
 		RootDir:     scanOpts.RootDir,
 		Concurrency: scanOpts.Concurrency,
+		OnProgress: func(evt engine.ProgressEvent) {
+			p3.Send(tui.ProcessItemMsg{
+				Type:   evt.Type,
+				Path:   evt.Path,
+				Action: evt.Action,
+				Err:    evt.Error,
+				Done:   evt.Done,
+				Total:  evt.Total,
+			})
+		},
 	}
 
+	go func() {
+		result, err := eng.Push(ctx, selected, pushOpts)
+		p3.Send(tui.ProcessCompleteMsg{Result: result, Err: err})
+	}()
+
+	finalModel2, err := p3.Run()
+	if err != nil {
+		return fmt.Errorf("process TUI: %w", err)
+	}
+
+	pm2, ok := finalModel2.(tui.ProcessModel)
+	if !ok {
+		return fmt.Errorf("unexpected model type from process TUI")
+	}
+
+	if pm2.Err() != nil {
+		if pm2.Err() == context.Canceled {
+			pr.Warning("Push cancelled.")
+			return &exitError{code: ExitError}
+		}
+		return pm2.Err()
+	}
+
+	pushResult, ok := pm2.Result().(*engine.PushResult)
+	if !ok {
+		return fmt.Errorf("unexpected result type from process model")
+	}
+
+	// Count results for summary.
 	pushed := 0
 	failed := 0
-	pushOpts.OnProgress = func(evt engine.ProgressEvent) {
-		if evt.Type == engine.EventCompleted {
-			pushed++
-		} else if evt.Type == engine.EventFailed {
+	for _, action := range pushResult.Actions {
+		if action.Error != nil {
 			failed++
+		} else if !strings.Contains(action.Action, "skipped") {
+			pushed++
 		}
 	}
 
-	pushResult, err := eng.Push(ctx, selected, pushOpts)
-	if err != nil {
-		return fmt.Errorf("pushing submodules: %w", err)
-	}
-
-	// Stream results.
-	printPushResults(pr, pushResult)
-
-	// Summary banner.
 	fmt.Fprintf(cmd.OutOrStdout(), "\n%d pushed, %d failed\n", pushed, failed)
 
 	if failed > 0 {
