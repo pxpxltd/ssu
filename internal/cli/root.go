@@ -50,6 +50,7 @@ Run without arguments for an interactive menu, or use a subcommand directly.`,
 		NewStatusCmd(),
 		NewUpdateCmd(),
 		NewPushCmd(),
+		NewCheckoutCmd(),
 		NewProjectCmd(),
 		NewExecCmd(),
 		NewInitCmd(),
@@ -144,6 +145,7 @@ func showInteractiveMenu(cmd *cobra.Command) error {
 		{"status", "Show submodule status"},
 		{"update", "Update submodules"},
 		{"push", "Push ahead submodules"},
+		{"checkout", "Resolve detached HEAD"},
 		{"project", "Commit submodule changes"},
 		{"exec", "Run command in submodules"},
 		{"rollback", "Rollback from backup"},
@@ -157,7 +159,7 @@ func showInteractiveMenu(cmd *cobra.Command) error {
 		fmt.Fprintf(cmd.OutOrStdout(), "  %d) %-10s - %s\n", i+1, item.name, item.desc)
 	}
 	fmt.Fprintln(cmd.OutOrStdout())
-	fmt.Fprint(cmd.OutOrStdout(), "Choose [1-8]: ")
+	fmt.Fprint(cmd.OutOrStdout(), "Choose [1-9]: ")
 
 	scanner := bufio.NewScanner(os.Stdin)
 	if !scanner.Scan() {
@@ -174,14 +176,16 @@ func showInteractiveMenu(cmd *cobra.Command) error {
 	case "3":
 		subcmd = "push"
 	case "4":
-		subcmd = "project"
+		subcmd = "checkout"
 	case "5":
-		subcmd = "exec"
+		subcmd = "project"
 	case "6":
-		subcmd = "rollback"
+		subcmd = "exec"
 	case "7":
-		subcmd = "backup"
+		subcmd = "rollback"
 	case "8":
+		subcmd = "backup"
+	case "9":
 		return cmd.Help()
 	default:
 		fmt.Fprintf(cmd.ErrOrStderr(), "Invalid choice: %s\n", choice)

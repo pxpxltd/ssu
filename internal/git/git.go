@@ -44,6 +44,9 @@ type GitService interface {
 	MergeAbort(ctx context.Context, dir string) error
 	ResetHard(ctx context.Context, dir, ref string) error
 
+	// Branch queries
+	BranchesPointingAt(ctx context.Context, dir, ref string) (BranchPointsAtResult, error)
+
 	// Root repository operations
 	DiffIndex(ctx context.Context, dir string) ([]string, error)
 	StageFiles(ctx context.Context, dir string, paths []string) error
@@ -144,6 +147,18 @@ type BranchDetectOpts struct {
 	Override         string   // --branch CLI flag (highest priority)
 	PriorityBranches []string // Default: ["develop", "master", "main"]
 	DefaultRemote    string   // Default: "origin"
+}
+
+// BranchCheckoutOpts configures branch resolution for checkout.
+type BranchCheckoutOpts struct {
+	PriorityBranches []string // Default: ["develop", "master", "main"]
+	DefaultRemote    string   // Default: "origin"
+}
+
+// BranchPointsAtResult holds the branches whose tip equals a given ref.
+type BranchPointsAtResult struct {
+	Local  []string       // Local branch names (e.g. "develop", "feature/foo")
+	Remote []RemoteBranch // Remote branches (e.g. origin/develop)
 }
 
 // DefaultBranchPriority is the default branch priority chain for detection.

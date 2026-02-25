@@ -33,6 +33,7 @@ type MockGitService struct {
 	CommitFn                 func(ctx context.Context, dir, message string) (CommitResult, error)
 	ListTagsFn               func(ctx context.Context, dir string, limit int) ([]string, error)
 	CreateTagFn              func(ctx context.Context, dir string, opts TagOpts) error
+	BranchesPointingAtFn     func(ctx context.Context, dir, ref string) (BranchPointsAtResult, error)
 }
 
 func (m *MockGitService) SubmodulePaths(ctx context.Context, rootDir string) ([]string, error) {
@@ -215,4 +216,11 @@ func (m *MockGitService) CreateTag(ctx context.Context, dir string, opts TagOpts
 		return m.CreateTagFn(ctx, dir, opts)
 	}
 	return nil
+}
+
+func (m *MockGitService) BranchesPointingAt(ctx context.Context, dir, ref string) (BranchPointsAtResult, error) {
+	if m.BranchesPointingAtFn != nil {
+		return m.BranchesPointingAtFn(ctx, dir, ref)
+	}
+	return BranchPointsAtResult{}, nil
 }

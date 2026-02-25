@@ -131,3 +131,28 @@ type PushAction struct {
 	Action string // e.g. "pushed", "set-upstream", "skipped", "error"
 	Error  error
 }
+
+// ---------------------------------------------------------------------------
+// Checkout types
+// ---------------------------------------------------------------------------
+
+// CheckoutOpts configures a Checkout operation.
+type CheckoutOpts struct {
+	RootDir     string
+	Concurrency int
+	BranchOpts  git.BranchCheckoutOpts
+	OnProgress  ProgressFunc
+}
+
+// CheckoutResult holds the aggregate outcome of checking out submodules.
+type CheckoutResult struct {
+	Actions []CheckoutAction
+}
+
+// CheckoutAction records what happened to a single submodule during checkout.
+type CheckoutAction struct {
+	Path   string
+	Branch string // Branch checked out (or empty if skipped)
+	Action string // e.g. "checked out develop", "skipped (not detached)", "skipped (no matching branch)"
+	Error  error
+}

@@ -108,6 +108,12 @@ type PushCompleteMsg struct {
 	Err    error
 }
 
+// CheckoutCompleteMsg is sent when a checkout operation completes.
+type CheckoutCompleteMsg struct {
+	Result *engine.CheckoutResult
+	Err    error
+}
+
 // ---------------------------------------------------------------------------
 // Helpers for converting engine types to SelectorItems.
 // ---------------------------------------------------------------------------
@@ -140,6 +146,17 @@ func FilterAhead() func(SelectorItem) bool {
 			return true
 		}
 		return si.Info.HasStatus(git.StatusAhead)
+	}
+}
+
+// FilterDetached returns a FilterFn that keeps only items with detached HEAD.
+func FilterDetached() func(SelectorItem) bool {
+	return func(item SelectorItem) bool {
+		si, ok := item.(SubmoduleItem)
+		if !ok {
+			return true
+		}
+		return si.Info.DetachedHead
 	}
 }
 

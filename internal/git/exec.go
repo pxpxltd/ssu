@@ -504,6 +504,58 @@ func (g *ExecGit) CreateTag(ctx context.Context, dir string, opts TagOpts) error
 }
 
 // ---------------------------------------------------------------------------
+// Branch queries
+// ---------------------------------------------------------------------------
+
+func (g *ExecGit) BranchesPointingAt(ctx context.Context, dir, ref string) (BranchPointsAtResult, error) {
+	stdout, _, err := g.run(ctx, dir, g.Timeouts.Default, "branch", "--all", "--points-at", ref)
+	if err != nil {
+		// No branches pointing at ref is not an error.
+		if isGitExitError(err) {
+			return BranchPointsAtResult{}, nil
+		}
+		return BranchPointsAtResult{}, err
+	}
+	if stdout == "" {
+		return BranchPointsAtResult{}, nil
+	}
+
+	var result BranchPointsAtResult
+	for _, line := range strings.Split(stdout, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// Skip "* (HEAD detached at ...)" line.
+		if strings.HasPrefix(line, "* (") {
+			continue
+		}
+		// Strip leading "* " for current branch marker.
+		line = strings.TrimPrefix(line, "* ")
+
+		// Remote branches start with "remotes/"
+		if strings.HasPrefix(line, "remotes/") {
+			// Strip "remotes/" prefix: "remotes/origin/develop" -> "origin/develop"
+			trimmed := strings.TrimPrefix(line, "remotes/")
+			// Skip symbolic refs like "origin/HEAD -> origin/develop"
+			if strings.Contains(trimmed, " -> ") {
+				continue
+			}
+			idx := strings.Index(trimmed, "/")
+			if idx > 0 {
+				result.Remote = append(result.Remote, RemoteBranch{
+					Remote: trimmed[:idx],
+					Branch: trimmed[idx+1:],
+				})
+			}
+		} else {
+			result.Local = append(result.Local, line)
+		}
+	}
+	return result, nil
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
