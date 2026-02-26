@@ -410,6 +410,20 @@ func (g *ExecGit) ResetHard(ctx context.Context, dir, ref string) error {
 }
 
 // ---------------------------------------------------------------------------
+// Submodule removal
+// ---------------------------------------------------------------------------
+
+func (g *ExecGit) SubmoduleDeinit(ctx context.Context, rootDir, subPath string) error {
+	_, _, err := g.run(ctx, rootDir, g.Timeouts.Default, "submodule", "deinit", "-f", subPath)
+	return err
+}
+
+func (g *ExecGit) RemovePath(ctx context.Context, rootDir, path string) error {
+	_, _, err := g.run(ctx, rootDir, g.Timeouts.Default, "rm", "-f", path)
+	return err
+}
+
+// ---------------------------------------------------------------------------
 // Root repository operations
 // ---------------------------------------------------------------------------
 

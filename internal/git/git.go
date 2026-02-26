@@ -47,6 +47,10 @@ type GitService interface {
 	// Branch queries
 	BranchesPointingAt(ctx context.Context, dir, ref string) (BranchPointsAtResult, error)
 
+	// Submodule removal
+	SubmoduleDeinit(ctx context.Context, rootDir, subPath string) error
+	RemovePath(ctx context.Context, rootDir, path string) error
+
 	// Root repository operations
 	DiffIndex(ctx context.Context, dir string) ([]string, error)
 	StageFiles(ctx context.Context, dir string, paths []string) error
