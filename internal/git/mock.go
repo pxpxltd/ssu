@@ -9,6 +9,7 @@ import "context"
 type MockGitService struct {
 	SubmodulePathsFn         func(ctx context.Context, rootDir string) ([]string, error)
 	IsSubmoduleInitializedFn func(rootDir, subPath string) bool
+	SubmoduleInitFn          func(ctx context.Context, rootDir string, paths []string) error
 	CurrentBranchFn          func(ctx context.Context, dir string) (BranchResult, error)
 	CurrentSHAFn             func(ctx context.Context, dir string) (string, error)
 	IsDetachedHeadFn         func(ctx context.Context, dir string) (bool, error)
@@ -50,6 +51,13 @@ func (m *MockGitService) IsSubmoduleInitialized(rootDir, subPath string) bool {
 		return m.IsSubmoduleInitializedFn(rootDir, subPath)
 	}
 	return true
+}
+
+func (m *MockGitService) SubmoduleInit(ctx context.Context, rootDir string, paths []string) error {
+	if m.SubmoduleInitFn != nil {
+		return m.SubmoduleInitFn(ctx, rootDir, paths)
+	}
+	return nil
 }
 
 func (m *MockGitService) CurrentBranch(ctx context.Context, dir string) (BranchResult, error) {

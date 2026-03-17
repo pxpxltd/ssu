@@ -18,6 +18,7 @@ type GitService interface {
 	// Repository discovery
 	SubmodulePaths(ctx context.Context, rootDir string) ([]string, error)
 	IsSubmoduleInitialized(rootDir, subPath string) bool
+	SubmoduleInit(ctx context.Context, rootDir string, paths []string) error
 
 	// Branch and revision queries
 	CurrentBranch(ctx context.Context, dir string) (BranchResult, error)

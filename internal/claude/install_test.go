@@ -15,8 +15,8 @@ func TestInstallCommandsTo_Fresh(t *testing.T) {
 		t.Fatalf("InstallCommandsTo: %v", err)
 	}
 
-	if len(result.Installed) != 3 {
-		t.Errorf("Installed = %d, want 3; got %v", len(result.Installed), result.Installed)
+	if len(result.Installed) != 9 {
+		t.Errorf("Installed = %d, want 9; got %v", len(result.Installed), result.Installed)
 	}
 	if len(result.Skipped) != 0 {
 		t.Errorf("Skipped = %d, want 0", len(result.Skipped))
@@ -25,8 +25,8 @@ func TestInstallCommandsTo_Fresh(t *testing.T) {
 		t.Errorf("Dir = %q, want %q", result.Dir, dir)
 	}
 
-	// Verify all three files exist on disk
-	for _, name := range []string{"status.md", "update.md", "push.md"} {
+	// Verify all nine files exist on disk
+	for _, name := range []string{"status.md", "update.md", "push.md", "checkout.md", "project.md", "exec.md", "rollback.md", "rm.md", "allow.md"} {
 		path := filepath.Join(dir, name)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("expected file %s to exist", path)
@@ -49,8 +49,8 @@ func TestInstallCommandsTo_SkipIdentical(t *testing.T) {
 		t.Fatalf("second install: %v", err)
 	}
 
-	if len(result.Skipped) != 3 {
-		t.Errorf("Skipped = %d, want 3; got %v", len(result.Skipped), result.Skipped)
+	if len(result.Skipped) != 9 {
+		t.Errorf("Skipped = %d, want 9; got %v", len(result.Skipped), result.Skipped)
 	}
 	if len(result.Installed) != 0 {
 		t.Errorf("Installed = %d, want 0; got %v", len(result.Installed), result.Installed)
@@ -114,9 +114,9 @@ func TestInstallCommandsTo_ForceOverwrite(t *testing.T) {
 		t.Errorf("expected update.md in Installed, got %v", result.Installed)
 	}
 
-	// The other two identical files should be in Skipped
-	if len(result.Skipped) != 2 {
-		t.Errorf("Skipped = %d, want 2; got %v", len(result.Skipped), result.Skipped)
+	// The other eight identical files should be in Skipped
+	if len(result.Skipped) != 8 {
+		t.Errorf("Skipped = %d, want 8; got %v", len(result.Skipped), result.Skipped)
 	}
 }
 
@@ -129,8 +129,8 @@ func TestInstallCommandsTo_CreatesDirectory(t *testing.T) {
 		t.Fatalf("InstallCommandsTo: %v", err)
 	}
 
-	if len(result.Installed) != 3 {
-		t.Errorf("Installed = %d, want 3", len(result.Installed))
+	if len(result.Installed) != 9 {
+		t.Errorf("Installed = %d, want 9", len(result.Installed))
 	}
 
 	// Verify directory was created and files exist
@@ -138,8 +138,8 @@ func TestInstallCommandsTo_CreatesDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadDir: %v", err)
 	}
-	if len(entries) != 3 {
-		t.Errorf("directory entries = %d, want 3", len(entries))
+	if len(entries) != 9 {
+		t.Errorf("directory entries = %d, want 9", len(entries))
 	}
 }
 

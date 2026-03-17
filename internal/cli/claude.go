@@ -36,9 +36,15 @@ func NewClaudeInstallCmd() *cobra.Command {
 		Long: `Install SSU slash commands into ~/.claude/commands/ssu/.
 
 This copies command files that enable Claude Code to use SSU directly:
-  /ssu:status  - Check submodule status
-  /ssu:update  - Update submodules
-  /ssu:push    - Push ahead submodules
+  /ssu:status    - Check submodule status
+  /ssu:update    - Update submodules
+  /ssu:push      - Push ahead submodules
+  /ssu:checkout  - Resolve detached HEAD
+  /ssu:project   - Commit submodule pointer changes
+  /ssu:exec      - Run command across submodules
+  /ssu:rollback  - Restore from backup
+  /ssu:rm        - Remove a submodule cleanly
+  /ssu:allow     - Fix git dubious ownership errors
 
 Use --force to overwrite existing files that differ from the current version.
 Identical files are always skipped.`,
@@ -61,7 +67,7 @@ Identical files are always skipped.`,
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "\nInstalled %d command(s) to %s\n", len(result.Installed), result.Dir)
-			fmt.Fprintln(cmd.OutOrStdout(), "Commands available: /ssu:status, /ssu:update, /ssu:push")
+			fmt.Fprintln(cmd.OutOrStdout(), "Commands available: /ssu:status, /ssu:update, /ssu:push, /ssu:checkout, /ssu:project, /ssu:exec, /ssu:rollback, /ssu:rm, /ssu:allow")
 
 			return nil
 		},

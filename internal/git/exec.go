@@ -127,6 +127,13 @@ func (g *ExecGit) IsSubmoduleInitialized(rootDir, subPath string) bool {
 	return info != nil
 }
 
+func (g *ExecGit) SubmoduleInit(ctx context.Context, rootDir string, paths []string) error {
+	args := []string{"submodule", "update", "--init", "--recursive", "--"}
+	args = append(args, paths...)
+	_, _, err := g.run(ctx, rootDir, g.Timeouts.Fetch, args...)
+	return err
+}
+
 // ---------------------------------------------------------------------------
 // Branch and revision queries
 // ---------------------------------------------------------------------------

@@ -112,6 +112,16 @@ func runUpdateDryRun(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGi
 		return fmt.Errorf("scanning submodules: %w", err)
 	}
 
+	// Report missing (uninitialized) submodules.
+	missing := filterMissing(result.Submodules)
+	if len(missing) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "%d submodule(s) not initialized, would be initialized:\n", len(missing))
+		for _, sub := range missing {
+			fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", sub.Path)
+		}
+		fmt.Fprintln(cmd.OutOrStdout())
+	}
+
 	pending := filterPending(result.Submodules)
 	if len(pending) == 0 {
 		pr.Info("All submodules are up to date.")
@@ -167,6 +177,23 @@ func runUpdateAuto(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit,
 		return fmt.Errorf("scanning submodules: %w", err)
 	}
 
+	// Auto-init missing submodules.
+	missing := filterMissing(result.Submodules)
+	if len(missing) > 0 {
+		paths := missingPaths(missing)
+		pr.Infof("Initializing %d missing submodule(s)...", len(missing))
+		if initErr := gitSvc.SubmoduleInit(ctx, rootDir, paths); initErr != nil {
+			pr.Warningf("Init failed: %v (continuing with available submodules)", initErr)
+		} else {
+			pr.Successf("Initialized %d submodule(s)", len(missing))
+			// Re-scan to pick up newly initialized submodules.
+			result, err = eng.Scan(ctx, scanOpts)
+			if err != nil {
+				return fmt.Errorf("re-scanning submodules: %w", err)
+			}
+		}
+	}
+
 	pending := filterPending(result.Submodules)
 	if len(pending) == 0 {
 		pr.Info("All submodules are up to date.")
@@ -217,6 +244,27 @@ func runUpdateInteractive(ctx context.Context, eng *engine.Engine, gitSvc *git.E
 			return nil
 		}
 		return fmt.Errorf("scanning submodules: %w", err)
+	}
+
+	// Auto-init missing submodules.
+	missing := filterMissing(scanResult.Submodules)
+	if len(missing) > 0 {
+		paths := missingPaths(missing)
+		pr.Infof("Initializing %d missing submodule(s)...", len(missing))
+		if initErr := gitSvc.SubmoduleInit(ctx, rootDir, paths); initErr != nil {
+			pr.Warningf("Init failed: %v (continuing with available submodules)", initErr)
+		} else {
+			pr.Successf("Initialized %d submodule(s)", len(missing))
+			// Re-scan to pick up newly initialized submodules.
+			scanResult, err = runScanWithSpinner(ctx, eng, scanOpts)
+			if err != nil {
+				if err == context.Canceled {
+					pr.Warning("Re-scan cancelled.")
+					return nil
+				}
+				return fmt.Errorf("re-scanning submodules: %w", err)
+			}
+		}
 	}
 
 	pending := filterPending(scanResult.Submodules)
@@ -378,6 +426,26 @@ func filterPending(subs []*engine.SubmoduleInfo) []*engine.SubmoduleInfo {
 		}
 	}
 	return pending
+}
+
+// filterMissing returns only submodules with StatusMissing.
+func filterMissing(subs []*engine.SubmoduleInfo) []*engine.SubmoduleInfo {
+	var missing []*engine.SubmoduleInfo
+	for _, sub := range subs {
+		if sub.HasStatus(git.StatusMissing) {
+			missing = append(missing, sub)
+		}
+	}
+	return missing
+}
+
+// missingPaths extracts paths from missing submodules.
+func missingPaths(subs []*engine.SubmoduleInfo) []string {
+	paths := make([]string, len(subs))
+	for i, sub := range subs {
+		paths[i] = sub.Path
+	}
+	return paths
 }
 
 // resolveRef resolves a git ref to a short SHA (7 chars).
