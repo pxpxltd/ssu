@@ -52,7 +52,12 @@ func (e *Engine) Checkout(ctx context.Context, targets []*SubmoduleInfo, opts Ch
 		g.Go(func() error {
 			fire(ProgressEvent{Type: EventStarted, Path: info.Path, Phase: "checkout", Total: total, Done: done})
 
-			action := e.checkoutOne(ctx, opts.RootDir, info, opts.BranchOpts)
+			var action CheckoutAction
+		if opts.Reset {
+			action = e.checkoutOneReset(ctx, opts, info)
+		} else {
+			action = e.checkoutOne(ctx, opts.RootDir, info, opts.BranchOpts)
+		}
 
 			mu.Lock()
 			done++
@@ -121,5 +126,103 @@ func (e *Engine) checkoutOne(ctx context.Context, rootDir string, info *Submodul
 		Path:   info.Path,
 		Branch: result.Branch,
 		Action: fmt.Sprintf("checked out %s", result.Branch),
+	}
+}
+
+// checkoutOneReset handles a single submodule in --reset mode.
+// It compares the current SHA against the recorded SHA and resolves
+// a named branch at the recorded SHA if possible.
+func (e *Engine) checkoutOneReset(ctx context.Context, opts CheckoutOpts, info *SubmoduleInfo) CheckoutAction {
+	dir := filepath.Join(opts.RootDir, info.Path)
+
+	recordedSHA, ok := opts.RecordedSHAs[info.Path]
+	if !ok {
+		return CheckoutAction{
+			Path:   info.Path,
+			Action: "skipped (not in recorded SHAs)",
+		}
+	}
+
+	// Get current SHA.
+	currentSHA := info.CurrentSHA
+	if currentSHA == "" {
+		var err error
+		currentSHA, err = e.git.CurrentSHA(ctx, dir)
+		if err != nil {
+			return CheckoutAction{
+				Path:   info.Path,
+				Action: "error getting current SHA",
+				Error:  err,
+			}
+		}
+	}
+
+	// Already at the recorded SHA and on a branch -- nothing to do.
+	if currentSHA == recordedSHA && !info.DetachedHead {
+		return CheckoutAction{
+			Path:   info.Path,
+			Branch: info.CurrentBranch,
+			Action: "already at recorded SHA on " + info.CurrentBranch,
+		}
+	}
+
+	// Check for dirty working tree.
+	dirty, err := e.git.HasLocalChanges(ctx, dir)
+	if err == nil && dirty {
+		return CheckoutAction{
+			Path:   info.Path,
+			Action: "skipped (dirty working tree)",
+		}
+	}
+
+	// Resolve a named branch at the recorded SHA.
+	branchOpts := opts.BranchOpts
+	branchOpts.TargetSHA = recordedSHA
+	branch, _, resolveErr := git.ResolveBranchForCheckout(ctx, e.git, dir, branchOpts)
+	if resolveErr != nil {
+		return CheckoutAction{
+			Path:   info.Path,
+			Action: "error resolving branch",
+			Error:  resolveErr,
+		}
+	}
+
+	if branch == "" {
+		// No branch points at this SHA -- checkout the SHA directly.
+		shortSHA := recordedSHA
+		if len(shortSHA) > 7 {
+			shortSHA = shortSHA[:7]
+		}
+		_, coErr := e.git.Checkout(ctx, dir, recordedSHA)
+		if coErr != nil {
+			return CheckoutAction{
+				Path:     info.Path,
+				Action:   "checkout failed",
+				Detached: true,
+				Error:    coErr,
+			}
+		}
+		return CheckoutAction{
+			Path:     info.Path,
+			Action:   fmt.Sprintf("detached at %s", shortSHA),
+			Detached: true,
+		}
+	}
+
+	// Checkout the named branch.
+	_, coErr := e.git.Checkout(ctx, dir, branch)
+	if coErr != nil {
+		return CheckoutAction{
+			Path:   info.Path,
+			Branch: branch,
+			Action: fmt.Sprintf("checkout %s failed", branch),
+			Error:  coErr,
+		}
+	}
+
+	return CheckoutAction{
+		Path:   info.Path,
+		Branch: branch,
+		Action: fmt.Sprintf("checked out %s", branch),
 	}
 }
