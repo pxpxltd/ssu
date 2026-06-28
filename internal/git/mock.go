@@ -19,10 +19,13 @@ type MockGitService struct {
 	HasRemoteBranchFn        func(ctx context.Context, dir, remote, branch string) (bool, error)
 	SymbolicRefFn            func(ctx context.Context, dir, ref string) (string, error)
 	TrackingBranchFn         func(ctx context.Context, dir string) (TrackingInfo, error)
+	RefExistsFn              func(ctx context.Context, dir, ref string) (bool, error)
+	IsAncestorFn             func(ctx context.Context, dir, ancestor, descendant string) (bool, error)
 	HasLocalChangesFn        func(ctx context.Context, dir string) (bool, error)
 	IncomingChangelogFn      func(ctx context.Context, dir, remoteRef string, limit int) ([]string, error)
 	FetchFn                  func(ctx context.Context, dir string, opts FetchOpts) (FetchResult, error)
 	CheckoutFn               func(ctx context.Context, dir, branch string) (CheckoutResult, error)
+	CheckoutNewBranchFn      func(ctx context.Context, dir, branch, startPoint string) (CheckoutResult, error)
 	MergeFn                  func(ctx context.Context, dir, ref string) (MergeResult, error)
 	PushFn                   func(ctx context.Context, dir string, opts PushOpts) (PushResult, error)
 	StashFn                  func(ctx context.Context, dir string) (StashResult, error)
@@ -123,6 +126,20 @@ func (m *MockGitService) TrackingBranch(ctx context.Context, dir string) (Tracki
 	return TrackingInfo{Remote: "origin", Branch: "develop", Set: true}, nil
 }
 
+func (m *MockGitService) RefExists(ctx context.Context, dir, ref string) (bool, error) {
+	if m.RefExistsFn != nil {
+		return m.RefExistsFn(ctx, dir, ref)
+	}
+	return true, nil
+}
+
+func (m *MockGitService) IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error) {
+	if m.IsAncestorFn != nil {
+		return m.IsAncestorFn(ctx, dir, ancestor, descendant)
+	}
+	return true, nil
+}
+
 func (m *MockGitService) HasLocalChanges(ctx context.Context, dir string) (bool, error) {
 	if m.HasLocalChangesFn != nil {
 		return m.HasLocalChangesFn(ctx, dir)
@@ -147,6 +164,13 @@ func (m *MockGitService) Fetch(ctx context.Context, dir string, opts FetchOpts) 
 func (m *MockGitService) Checkout(ctx context.Context, dir, branch string) (CheckoutResult, error) {
 	if m.CheckoutFn != nil {
 		return m.CheckoutFn(ctx, dir, branch)
+	}
+	return CheckoutResult{Branch: branch}, nil
+}
+
+func (m *MockGitService) CheckoutNewBranch(ctx context.Context, dir, branch, startPoint string) (CheckoutResult, error) {
+	if m.CheckoutNewBranchFn != nil {
+		return m.CheckoutNewBranchFn(ctx, dir, branch, startPoint)
 	}
 	return CheckoutResult{Branch: branch}, nil
 }

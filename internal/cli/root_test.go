@@ -17,7 +17,7 @@ func TestRootCmdHelp(t *testing.T) {
 	}
 
 	out := buf.String()
-	for _, want := range []string{"status", "update", "push", "rollback", "backup", "config", "version", "completion"} {
+	for _, want := range []string{"status", "update", "push", "rollback", "backup", "export", "import", "config", "version", "completion"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("help output missing %q\ngot: %s", want, out)
 		}

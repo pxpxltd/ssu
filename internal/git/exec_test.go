@@ -166,6 +166,61 @@ func TestExecGitCurrentSHA(t *testing.T) {
 	}
 }
 
+func TestExecGitRefExistsAndIsAncestor(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	dir := setupTestRepo(t)
+	g := git.NewExecGit()
+	ctx := context.Background()
+
+	initial, err := g.CurrentSHA(ctx, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exists, err := g.RefExists(ctx, dir, initial)
+	if err != nil || !exists {
+		t.Fatalf("RefExists(initial) = %v, %v", exists, err)
+	}
+	exists, err = g.RefExists(ctx, dir, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+	if err != nil || exists {
+		t.Fatalf("RefExists(missing) = %v, %v", exists, err)
+	}
+
+	addCommit(t, dir, "second")
+	head, err := g.CurrentSHA(ctx, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ancestor, err := g.IsAncestor(ctx, dir, initial, head)
+	if err != nil || !ancestor {
+		t.Fatalf("IsAncestor(initial, head) = %v, %v", ancestor, err)
+	}
+	ancestor, err = g.IsAncestor(ctx, dir, head, initial)
+	if err != nil || ancestor {
+		t.Fatalf("IsAncestor(head, initial) = %v, %v", ancestor, err)
+	}
+}
+
+func TestExecGitCheckoutNewBranch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	dir := setupTestRepo(t)
+	g := git.NewExecGit()
+	result, err := g.CheckoutNewBranch(context.Background(), dir, "feature/imported", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Branch != "feature/imported" {
+		t.Fatalf("branch = %q", result.Branch)
+	}
+	current, err := g.CurrentBranch(context.Background(), dir)
+	if err != nil || current.Name != "feature/imported" {
+		t.Fatalf("current branch = %#v, %v", current, err)
+	}
+}
+
 func TestExecGitHasLocalChanges(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")

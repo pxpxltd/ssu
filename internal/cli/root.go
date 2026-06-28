@@ -51,6 +51,8 @@ Run without arguments for an interactive menu, or use a subcommand directly.`,
 		NewUpdateCmd(),
 		NewPushCmd(),
 		NewCheckoutCmd(),
+		NewExportCmd(),
+		NewImportCmd(),
 		NewProjectCmd(),
 		NewExecCmd(),
 		NewInitCmd(),
@@ -151,6 +153,8 @@ func showInteractiveMenu(cmd *cobra.Command) error {
 		{"exec", "Run command in submodules"},
 		{"rollback", "Rollback from backup"},
 		{"backup", "Manage backups"},
+		{"export", "Export submodule stack"},
+		{"import", "Import submodule stack"},
 		{"help", "Show full help"},
 	}
 
@@ -160,7 +164,7 @@ func showInteractiveMenu(cmd *cobra.Command) error {
 		fmt.Fprintf(cmd.OutOrStdout(), "  %d) %-10s - %s\n", i+1, item.name, item.desc)
 	}
 	fmt.Fprintln(cmd.OutOrStdout())
-	fmt.Fprint(cmd.OutOrStdout(), "Choose [1-9]: ")
+	fmt.Fprint(cmd.OutOrStdout(), "Choose [1-11]: ")
 
 	scanner := bufio.NewScanner(os.Stdin)
 	if !scanner.Scan() {
@@ -169,6 +173,7 @@ func showInteractiveMenu(cmd *cobra.Command) error {
 	choice := strings.TrimSpace(scanner.Text())
 
 	var subcmd string
+	var subargs []string
 	switch choice {
 	case "1":
 		subcmd = "status"
@@ -187,6 +192,20 @@ func showInteractiveMenu(cmd *cobra.Command) error {
 	case "8":
 		subcmd = "backup"
 	case "9":
+		subcmd = "export"
+		filename, ok := promptMenuFilename(cmd, scanner, "Export filename (.json): ")
+		if !ok {
+			return nil
+		}
+		subargs = append(subargs, filename)
+	case "10":
+		subcmd = "import"
+		filename, ok := promptMenuFilename(cmd, scanner, "Import filename (.json): ")
+		if !ok {
+			return nil
+		}
+		subargs = append(subargs, filename)
+	case "11":
 		return cmd.Help()
 	default:
 		fmt.Fprintf(cmd.ErrOrStderr(), "Invalid choice: %s\n", choice)
@@ -194,6 +213,19 @@ func showInteractiveMenu(cmd *cobra.Command) error {
 	}
 
 	// Dispatch to the chosen subcommand
-	cmd.SetArgs([]string{subcmd})
+	cmd.SetArgs(append([]string{subcmd}, subargs...))
 	return cmd.Execute()
+}
+
+func promptMenuFilename(cmd *cobra.Command, scanner *bufio.Scanner, prompt string) (string, bool) {
+	fmt.Fprint(cmd.OutOrStdout(), prompt)
+	if !scanner.Scan() {
+		return "", false
+	}
+	filename := strings.TrimSpace(scanner.Text())
+	if filename == "" {
+		fmt.Fprintln(cmd.ErrOrStderr(), "Filename cannot be empty.")
+		return "", false
+	}
+	return filename, true
 }
