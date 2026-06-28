@@ -136,6 +136,7 @@ None. All phases complete (including Phase 7 gap closure).
 | 002 | Green progress bar + informative selector header | 2026-02-09 | 324e153 | [002-green-progress-bar](./quick/002-green-progress-bar-and-selector-header/) |
 | 003 | Exec command fixes: progress bar, select-all, sh -c execution | 2026-02-09 | 8e6fd96 | [003-exec-command-fixes](./quick/003-exec-command-fixes/) |
 | 004 | Release guide (RELEASING.md) + README install methods | 2026-02-10 | f613be5 | [004-release-guide](./quick/004-create-a-proper-release-guide-go-install/) |
+| 005 | Submodule stack export/import with safe selective synchronization | 2026-06-28 | 0402e20 | [005-add-ssu-stack-export-import](./quick/005-add-ssu-stack-export-import/) |
 
 ## Session Continuity
 
