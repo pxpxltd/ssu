@@ -30,6 +30,8 @@ type GitService interface {
 	HasRemoteBranch(ctx context.Context, dir, remote, branch string) (bool, error)
 	SymbolicRef(ctx context.Context, dir, ref string) (string, error)
 	TrackingBranch(ctx context.Context, dir string) (TrackingInfo, error)
+	RefExists(ctx context.Context, dir, ref string) (bool, error)
+	IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error)
 
 	// Status queries
 	HasLocalChanges(ctx context.Context, dir string) (bool, error)
@@ -38,6 +40,7 @@ type GitService interface {
 	// Mutating operations
 	Fetch(ctx context.Context, dir string, opts FetchOpts) (FetchResult, error)
 	Checkout(ctx context.Context, dir, branch string) (CheckoutResult, error)
+	CheckoutNewBranch(ctx context.Context, dir, branch, startPoint string) (CheckoutResult, error)
 	Merge(ctx context.Context, dir, ref string) (MergeResult, error)
 	Push(ctx context.Context, dir string, opts PushOpts) (PushResult, error)
 	Stash(ctx context.Context, dir string) (StashResult, error)

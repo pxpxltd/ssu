@@ -240,6 +240,28 @@ func (g *ExecGit) SymbolicRef(ctx context.Context, dir, ref string) (string, err
 	return stdout, nil
 }
 
+func (g *ExecGit) RefExists(ctx context.Context, dir, ref string) (bool, error) {
+	_, _, err := g.run(ctx, dir, g.Timeouts.Default, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+	if err != nil {
+		if isGitExitError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func (g *ExecGit) IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error) {
+	_, _, err := g.run(ctx, dir, g.Timeouts.Default, "merge-base", "--is-ancestor", ancestor, descendant)
+	if err != nil {
+		if isGitExitError(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (g *ExecGit) TrackingBranch(ctx context.Context, dir string) (TrackingInfo, error) {
 	// First get current branch name.
 	branchOut, stderr, err := g.run(ctx, dir, g.Timeouts.Default, "rev-parse", "--abbrev-ref", "HEAD")
@@ -325,6 +347,14 @@ func (g *ExecGit) Fetch(ctx context.Context, dir string, opts FetchOpts) (FetchR
 
 func (g *ExecGit) Checkout(ctx context.Context, dir, branch string) (CheckoutResult, error) {
 	_, stderr, err := g.run(ctx, dir, g.Timeouts.Default, "checkout", branch)
+	if err != nil {
+		return CheckoutResult{Stderr: stderr}, err
+	}
+	return CheckoutResult{Branch: branch, Stderr: stderr}, nil
+}
+
+func (g *ExecGit) CheckoutNewBranch(ctx context.Context, dir, branch, startPoint string) (CheckoutResult, error) {
+	_, stderr, err := g.run(ctx, dir, g.Timeouts.Default, "checkout", "-b", branch, startPoint)
 	if err != nil {
 		return CheckoutResult{Stderr: stderr}, err
 	}

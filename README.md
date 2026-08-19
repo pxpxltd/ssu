@@ -114,6 +114,8 @@ SSU uses subcommands. Run `ssu` without arguments for an interactive menu.
 | Command | Description |
 |---------|-------------|
 | `ssu status` | Show submodule status table |
+| `ssu export <file>.json` | Export exact submodule branches and commits |
+| `ssu import <file>.json` | Synchronize submodules from an exported stack |
 | `ssu update` | Fetch and merge updates for submodules |
 | `ssu push` | Push submodules with unpushed commits |
 | `ssu project` | Commit submodule pointer changes in the root repo |
@@ -156,6 +158,45 @@ Status indicators:
 - **modified** (yellow) - Has local uncommitted changes
 - **ahead** (magenta) - Has unpushed commits
 - **conflict** (red) - Merge conflict detected
+
+### Share a Development Stack
+
+Export the exact branch and commit of every initialized submodule to a file
+that can be committed to the root repository:
+
+```bash
+ssu export .ssu-stack.json
+```
+
+Another developer can synchronize to that stack:
+
+```bash
+ssu import .ssu-stack.json          # Pick modules interactively (all pre-selected)
+ssu import .ssu-stack.json --auto   # Import every module without prompts
+ssu import .ssu-stack.json --dry-run
+```
+
+Import fetches each selected module before switching it. Dirty modules and
+clean target branches with unpushed or divergent commits are never overwritten;
+they are skipped and listed in the final summary. If an exported commit is not
+available after fetching, SSU falls back to `origin/<branch>` and warns that the
+exporting developer may have forgotten to push.
+
+Stack files use a versioned JSON format:
+
+```json
+{
+  "version": 1,
+  "generated_at": "2026-06-28T12:00:00+02:00",
+  "modules": [
+    {
+      "path": "services/api",
+      "branch": "feature/example",
+      "sha": "0123456789abcdef0123456789abcdef01234567"
+    }
+  ]
+}
+```
 
 ### Update
 
