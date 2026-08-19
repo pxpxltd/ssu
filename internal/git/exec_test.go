@@ -798,3 +798,50 @@ func TestExecGitMergeAbort(t *testing.T) {
 		t.Error("expected clean tree after merge abort")
 	}
 }
+
+// Git quotes non-ASCII paths in ls-tree output unless -z is used, which would
+// make the recorded-SHA keys unmatchable against paths read from .gitmodules.
+func TestExecGitSubmoduleRecordedSHAsNonASCIIPath(t *testing.T) {
+	outer := setupTestRepo(t)
+	inner := setupTestRepo(t)
+
+	subPaths := []string{"plugins/auth", "plügins/authö"}
+	for _, p := range subPaths {
+		add := exec.Command("git", "-c", "protocol.file.allow=always",
+			"submodule", "add", "-q", inner, p)
+		add.Dir = outer
+		if out, err := add.CombinedOutput(); err != nil {
+			t.Fatalf("submodule add %s: %v\n%s", p, err, out)
+		}
+	}
+	commit := exec.Command("git", "commit", "-qm", "add submodules")
+	commit.Dir = outer
+	if out, err := commit.CombinedOutput(); err != nil {
+		t.Fatalf("commit: %v\n%s", err, out)
+	}
+
+	g := git.NewExecGit()
+	shas, err := g.SubmoduleRecordedSHAs(context.Background(), outer, subPaths)
+	if err != nil {
+		t.Fatalf("SubmoduleRecordedSHAs: %v", err)
+	}
+
+	for _, p := range subPaths {
+		sha, ok := shas[p]
+		if !ok {
+			t.Errorf("path %q missing from recorded SHAs, got keys %v", p, keysOf(shas))
+			continue
+		}
+		if len(sha) != 40 {
+			t.Errorf("path %q: expected a full SHA, got %q", p, sha)
+		}
+	}
+}
+
+func keysOf(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}

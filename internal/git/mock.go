@@ -38,6 +38,7 @@ type MockGitService struct {
 	ListTagsFn               func(ctx context.Context, dir string, limit int) ([]string, error)
 	CreateTagFn              func(ctx context.Context, dir string, opts TagOpts) error
 	BranchesPointingAtFn     func(ctx context.Context, dir, ref string) (BranchPointsAtResult, error)
+	SubmoduleRecordedSHAsFn  func(ctx context.Context, rootDir string, paths []string) (map[string]string, error)
 	SubmoduleDeinitFn        func(ctx context.Context, rootDir, subPath string) error
 	RemovePathFn             func(ctx context.Context, rootDir, path string) error
 }
@@ -257,6 +258,13 @@ func (m *MockGitService) BranchesPointingAt(ctx context.Context, dir, ref string
 		return m.BranchesPointingAtFn(ctx, dir, ref)
 	}
 	return BranchPointsAtResult{}, nil
+}
+
+func (m *MockGitService) SubmoduleRecordedSHAs(ctx context.Context, rootDir string, paths []string) (map[string]string, error) {
+	if m.SubmoduleRecordedSHAsFn != nil {
+		return m.SubmoduleRecordedSHAsFn(ctx, rootDir, paths)
+	}
+	return nil, nil
 }
 
 func (m *MockGitService) SubmoduleDeinit(ctx context.Context, rootDir, subPath string) error {

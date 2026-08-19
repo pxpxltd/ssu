@@ -32,6 +32,7 @@ type SubmoduleInfo struct {
 	IsRoot        bool                  // True for root repository
 	Statuses      []git.SubmoduleStatus // Compound status set (can have multiple)
 	CurrentBranch string                // Branch name, or empty if detached
+	CurrentSHA    string                // Current HEAD SHA (full 40 chars)
 	TargetBranch  string                // Branch detected by DetectBestBranch
 	DetachedHead  bool                  // True if HEAD is detached
 	CommitsBehind int                   // Number of commits behind remote
@@ -138,10 +139,12 @@ type PushAction struct {
 
 // CheckoutOpts configures a Checkout operation.
 type CheckoutOpts struct {
-	RootDir     string
-	Concurrency int
-	BranchOpts  git.BranchCheckoutOpts
-	OnProgress  ProgressFunc
+	RootDir      string
+	Concurrency  int
+	BranchOpts   git.BranchCheckoutOpts
+	Reset        bool              // When true, processes all submodules (not just detached)
+	RecordedSHAs map[string]string // path -> recorded SHA from root's tree (used with Reset)
+	OnProgress   ProgressFunc
 }
 
 // CheckoutResult holds the aggregate outcome of checking out submodules.
@@ -151,8 +154,9 @@ type CheckoutResult struct {
 
 // CheckoutAction records what happened to a single submodule during checkout.
 type CheckoutAction struct {
-	Path   string
-	Branch string // Branch checked out (or empty if skipped)
-	Action string // e.g. "checked out develop", "skipped (not detached)", "skipped (no matching branch)"
-	Error  error
+	Path     string
+	Branch   string // Branch checked out (or empty if skipped/detached)
+	Action   string // e.g. "checked out develop", "skipped (not detached)", "detached at abc1234"
+	Detached bool   // True if left in detached HEAD state
+	Error    error
 }

@@ -50,6 +50,7 @@ type GitService interface {
 
 	// Branch queries
 	BranchesPointingAt(ctx context.Context, dir, ref string) (BranchPointsAtResult, error)
+	SubmoduleRecordedSHAs(ctx context.Context, rootDir string, paths []string) (map[string]string, error)
 
 	// Submodule removal
 	SubmoduleDeinit(ctx context.Context, rootDir, subPath string) error
@@ -161,6 +162,7 @@ type BranchDetectOpts struct {
 type BranchCheckoutOpts struct {
 	PriorityBranches []string // Default: ["develop", "master", "main"]
 	DefaultRemote    string   // Default: "origin"
+	TargetSHA        string   // If set, resolve branches at this SHA instead of current HEAD
 }
 
 // BranchPointsAtResult holds the branches whose tip equals a given ref.

@@ -606,6 +606,43 @@ func (g *ExecGit) BranchesPointingAt(ctx context.Context, dir, ref string) (Bran
 	return result, nil
 }
 
+func (g *ExecGit) SubmoduleRecordedSHAs(ctx context.Context, rootDir string, paths []string) (map[string]string, error) {
+	if len(paths) == 0 {
+		return nil, nil
+	}
+	// -z emits raw, NUL-terminated paths. Without it git quotes anything
+	// non-ASCII ("pl\303\274gins/auth"), which would never match the paths
+	// read from .gitmodules and the submodule would silently drop out.
+	args := []string{"ls-tree", "-z", "HEAD", "--"}
+	args = append(args, paths...)
+	stdout, _, err := g.run(ctx, rootDir, g.Timeouts.Default, args...)
+	if err != nil {
+		return nil, err
+	}
+	if stdout == "" {
+		return nil, nil
+	}
+	result := make(map[string]string)
+	for _, line := range strings.Split(stdout, "\x00") {
+		if line == "" {
+			continue
+		}
+		// Format: 160000 commit <sha>\t<path>
+		tabIdx := strings.Index(line, "\t")
+		if tabIdx < 0 {
+			continue
+		}
+		fields := strings.Fields(line[:tabIdx])
+		if len(fields) < 3 || fields[1] != "commit" {
+			continue
+		}
+		sha := fields[2]
+		path := line[tabIdx+1:]
+		result[path] = sha
+	}
+	return result, nil
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

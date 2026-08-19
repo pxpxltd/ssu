@@ -195,6 +195,25 @@ func TestResolveBranchForCheckout(t *testing.T) {
 			wantBr:    "develop",
 			wantLocal: true,
 		},
+		{
+			name: "TargetSHA used instead of CurrentSHA",
+			mock: &git.MockGitService{
+				CurrentSHAFn: func(_ context.Context, _ string) (string, error) {
+					return "current_sha", nil
+				},
+				BranchesPointingAtFn: func(_ context.Context, _, sha string) (git.BranchPointsAtResult, error) {
+					if sha == "target_sha" {
+						return git.BranchPointsAtResult{
+							Local: []string{"feature/target"},
+						}, nil
+					}
+					return git.BranchPointsAtResult{}, nil
+				},
+			},
+			opts:      git.BranchCheckoutOpts{TargetSHA: "target_sha"},
+			wantBr:    "feature/target",
+			wantLocal: true,
+		},
 	}
 
 	for _, tt := range tests {

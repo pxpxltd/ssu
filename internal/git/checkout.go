@@ -23,9 +23,13 @@ func ResolveBranchForCheckout(ctx context.Context, svc GitService, dir string, o
 		opts.DefaultRemote = "origin"
 	}
 
-	sha, err := svc.CurrentSHA(ctx, dir)
-	if err != nil {
-		return "", false, fmt.Errorf("resolve checkout branch: %w", err)
+	sha := opts.TargetSHA
+	if sha == "" {
+		var shaErr error
+		sha, shaErr = svc.CurrentSHA(ctx, dir)
+		if shaErr != nil {
+			return "", false, fmt.Errorf("resolve checkout branch: %w", shaErr)
+		}
 	}
 
 	branches, err := svc.BranchesPointingAt(ctx, dir, sha)

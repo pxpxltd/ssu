@@ -181,6 +181,12 @@ func (e *Engine) scanOne(ctx context.Context, absDir, path string, opts ScanOpts
 	}
 	info.CurrentBranch = br.Name
 
+	// Current SHA.
+	sha, err := e.git.CurrentSHA(ctx, absDir)
+	if err == nil {
+		info.CurrentSHA = sha
+	}
+
 	// Detect best target branch.
 	target, err := git.DetectBestBranch(ctx, e.git, absDir, opts.BranchOpts)
 	if err != nil {
