@@ -610,7 +610,10 @@ func (g *ExecGit) SubmoduleRecordedSHAs(ctx context.Context, rootDir string, pat
 	if len(paths) == 0 {
 		return nil, nil
 	}
-	args := []string{"ls-tree", "HEAD", "--"}
+	// -z emits raw, NUL-terminated paths. Without it git quotes anything
+	// non-ASCII ("pl\303\274gins/auth"), which would never match the paths
+	// read from .gitmodules and the submodule would silently drop out.
+	args := []string{"ls-tree", "-z", "HEAD", "--"}
 	args = append(args, paths...)
 	stdout, _, err := g.run(ctx, rootDir, g.Timeouts.Default, args...)
 	if err != nil {
@@ -620,7 +623,10 @@ func (g *ExecGit) SubmoduleRecordedSHAs(ctx context.Context, rootDir string, pat
 		return nil, nil
 	}
 	result := make(map[string]string)
-	for _, line := range strings.Split(stdout, "\n") {
+	for _, line := range strings.Split(stdout, "\x00") {
+		if line == "" {
+			continue
+		}
 		// Format: 160000 commit <sha>\t<path>
 		tabIdx := strings.Index(line, "\t")
 		if tabIdx < 0 {

@@ -825,3 +825,44 @@ func TestCheckout_ResetDirtyCheckFails(t *testing.T) {
 		t.Errorf("unexpected action %q", action.Action)
 	}
 }
+
+// A submodule whose scan failed has no trustworthy DetachedHead/CurrentSHA and
+// may be missing the recorded commit entirely, so reset must report the scan
+// error instead of attempting a checkout.
+func TestCheckout_ResetSkipsScanFailures(t *testing.T) {
+	checkoutCalled := false
+	mock := &git.MockGitService{
+		HasLocalChangesFn: func(_ context.Context, _ string) (bool, error) {
+			return false, nil
+		},
+		CheckoutFn: func(_ context.Context, _, _ string) (git.CheckoutResult, error) {
+			checkoutCalled = true
+			return git.CheckoutResult{}, nil
+		},
+	}
+
+	scanErr := errors.New("fetch failed: could not read from remote")
+	eng := New(mock)
+	result, err := eng.Checkout(context.Background(), []*SubmoduleInfo{
+		{Path: "plugins/auth", Error: scanErr},
+	}, CheckoutOpts{
+		RootDir:      "/project",
+		Concurrency:  1,
+		Reset:        true,
+		RecordedSHAs: map[string]string{"plugins/auth": "abc1234567890"},
+	})
+	if err != nil {
+		t.Fatalf("Checkout error: %v", err)
+	}
+
+	if checkoutCalled {
+		t.Error("must not check out a submodule whose scan failed")
+	}
+	action := result.Actions[0]
+	if !errors.Is(action.Error, scanErr) {
+		t.Errorf("expected the scan error to be reported, got %v", action.Error)
+	}
+	if action.Action != "skipped (scan failed)" {
+		t.Errorf("unexpected action %q", action.Action)
+	}
+}

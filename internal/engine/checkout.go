@@ -135,6 +135,19 @@ func (e *Engine) checkoutOne(ctx context.Context, rootDir string, info *Submodul
 func (e *Engine) checkoutOneReset(ctx context.Context, opts CheckoutOpts, info *SubmoduleInfo) CheckoutAction {
 	dir := filepath.Join(opts.RootDir, info.Path)
 
+	// A submodule whose scan failed carries no trustworthy state: DetachedHead
+	// and CurrentBranch were never determined, and the recorded commit may not
+	// even be in its object store if the fetch is what failed. Report the scan
+	// error rather than acting on missing information and surfacing a confusing
+	// checkout failure in its place.
+	if info.Error != nil {
+		return CheckoutAction{
+			Path:   info.Path,
+			Action: "skipped (scan failed)",
+			Error:  info.Error,
+		}
+	}
+
 	recordedSHA, ok := opts.RecordedSHAs[info.Path]
 	if !ok {
 		return CheckoutAction{

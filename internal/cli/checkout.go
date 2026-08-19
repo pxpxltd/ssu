@@ -217,26 +217,12 @@ func runCheckoutAuto(ctx context.Context, eng *engine.Engine, scanOpts engine.Sc
 		BranchOpts:  branchOpts,
 	}
 
-	checked := 0
-	skipped := 0
-	failed := 0
-	checkoutOpts.OnProgress = func(evt engine.ProgressEvent) {
-		switch evt.Type {
-		case engine.EventCompleted:
-			if strings.Contains(evt.Action, "skipped") {
-				skipped++
-			} else {
-				checked++
-			}
-		case engine.EventFailed:
-			failed++
-		}
-	}
-
 	checkoutResult, err := eng.Checkout(ctx, detached, checkoutOpts)
 	if err != nil {
 		return fmt.Errorf("checking out submodules: %w", err)
 	}
+
+	checked, skipped, failed := countCheckoutActions(checkoutResult.Actions)
 
 	printCheckoutResults(pr, checkoutResult)
 	fmt.Fprintf(cmd.OutOrStdout(), "\n%d checked out, %d skipped, %d failed\n", checked, skipped, failed)
@@ -438,9 +424,16 @@ func runResetDryRun(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit
 	}
 
 	var targets []resetTarget
+	var scanFailed []*engine.SubmoduleInfo
 	for _, sm := range result.Submodules {
 		recorded, ok := recordedSHAs[sm.Path]
 		if !ok {
+			continue
+		}
+		// Scan failures leave DetachedHead and CurrentSHA unset, so this
+		// submodule cannot be previewed honestly -- report it instead.
+		if sm.Error != nil {
+			scanFailed = append(scanFailed, sm)
 			continue
 		}
 		if sm.CurrentSHA == recorded && !sm.DetachedHead {
@@ -462,7 +455,10 @@ func runResetDryRun(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit
 	}
 
 	if len(targets) == 0 {
-		pr.Info("All submodules match root project's recorded commits.")
+		if len(scanFailed) == 0 {
+			pr.Info("All submodules match root project's recorded commits.")
+		}
+		printScanFailures(pr, scanFailed)
 		return nil
 	}
 
@@ -504,7 +500,16 @@ func runResetDryRun(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit
 			pr.Warningf("%s -- could not resolve target branch: %v", tgt.info.Path, tgt.resolveErr)
 		}
 	}
+	printScanFailures(pr, scanFailed)
 	return nil
+}
+
+// printScanFailures reports submodules left out of a reset preview because
+// their scan failed.
+func printScanFailures(pr *output.Printer, failed []*engine.SubmoduleInfo) {
+	for _, sm := range failed {
+		pr.Errorf("%s -- skipped, scan failed: %v", sm.Path, sm.Error)
+	}
 }
 
 func runResetAuto(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit, scanOpts engine.ScanOpts, branchOpts git.BranchCheckoutOpts, pr *output.Printer, cmd *cobra.Command) error {
@@ -535,26 +540,12 @@ func runResetAuto(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit, 
 		RecordedSHAs: recordedSHAs,
 	}
 
-	checked := 0
-	skipped := 0
-	failed := 0
-	checkoutOpts.OnProgress = func(evt engine.ProgressEvent) {
-		switch evt.Type {
-		case engine.EventCompleted:
-			if strings.Contains(evt.Action, "skipped") {
-				skipped++
-			} else {
-				checked++
-			}
-		case engine.EventFailed:
-			failed++
-		}
-	}
-
 	checkoutResult, err := eng.Checkout(ctx, targets, checkoutOpts)
 	if err != nil {
 		return fmt.Errorf("checking out submodules: %w", err)
 	}
+
+	checked, skipped, failed := countCheckoutActions(checkoutResult.Actions)
 
 	printCheckoutResults(pr, checkoutResult)
 	fmt.Fprintf(cmd.OutOrStdout(), "\n%d checked out, %d skipped, %d failed\n", checked, skipped, failed)
@@ -670,19 +661,7 @@ func runResetInteractive(ctx context.Context, eng *engine.Engine, gitSvc *git.Ex
 		return fmt.Errorf("unexpected result type from process model")
 	}
 
-	checked := 0
-	skipped := 0
-	failed := 0
-	for _, action := range checkoutResult.Actions {
-		switch {
-		case action.Error != nil:
-			failed++
-		case strings.Contains(action.Action, "skipped"):
-			skipped++
-		default:
-			checked++
-		}
-	}
+	checked, skipped, failed := countCheckoutActions(checkoutResult.Actions)
 
 	fmt.Fprintf(cmd.OutOrStdout(), "\n%d checked out, %d skipped, %d failed\n", checked, skipped, failed)
 
@@ -695,6 +674,24 @@ func runResetInteractive(ctx context.Context, eng *engine.Engine, gitSvc *git.Ex
 // ---------------------------------------------------------------------------
 // Reset helpers
 // ---------------------------------------------------------------------------
+
+// countCheckoutActions tallies a completed run's actions. Counting here rather
+// than from an OnProgress callback keeps the tally correct: the engine fires
+// progress events from several goroutines, so counters incremented inside the
+// callback race with each other.
+func countCheckoutActions(actions []engine.CheckoutAction) (checked, skipped, failed int) {
+	for _, action := range actions {
+		switch {
+		case action.Error != nil:
+			failed++
+		case strings.Contains(action.Action, "skipped"):
+			skipped++
+		default:
+			checked++
+		}
+	}
+	return checked, skipped, failed
+}
 
 func submodulePaths(subs []*engine.SubmoduleInfo) []string {
 	paths := make([]string, len(subs))
