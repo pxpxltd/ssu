@@ -248,13 +248,21 @@ func (e *Engine) scanOne(ctx context.Context, absDir, path string, opts ScanOpts
 //  3. A remote branch with the same name as the current branch.
 //  4. targetRef, for a local-only branch that exists on no remote: every commit
 //     it carries beyond the update target is genuinely unpushed.
+//
+// A failed lookup is not the same as an absent upstream: the helpers report a
+// missing ref as (false, nil), so an error means the answer is unknown. Falling
+// through to targetRef in that case would resurrect the very miscount this
+// resolution order exists to prevent, so any error stops ahead detection.
 func (e *Engine) resolveUpstreamRef(ctx context.Context, absDir string, info *SubmoduleInfo, remote, targetRef string) (string, bool) {
 	if info.DetachedHead || info.CurrentBranch == "" {
 		return "", false
 	}
 
 	tracking, err := e.git.TrackingBranch(ctx, absDir)
-	if err == nil && tracking.Set && tracking.Branch != "" {
+	if err != nil {
+		return "", false
+	}
+	if tracking.Set && tracking.Branch != "" {
 		trackRemote := tracking.Remote
 		if trackRemote == "" {
 			trackRemote = remote
@@ -263,12 +271,20 @@ func (e *Engine) resolveUpstreamRef(ctx context.Context, absDir string, info *Su
 		// The upstream may have been deleted on the remote and pruned by the
 		// fetch above, in which case fall through rather than count against
 		// a ref that no longer resolves.
-		if exists, existsErr := e.git.RefExists(ctx, absDir, ref); existsErr == nil && exists {
+		exists, existsErr := e.git.RefExists(ctx, absDir, ref)
+		if existsErr != nil {
+			return "", false
+		}
+		if exists {
 			return ref, true
 		}
 	}
 
-	if has, hasErr := e.git.HasRemoteBranch(ctx, absDir, remote, info.CurrentBranch); hasErr == nil && has {
+	has, hasErr := e.git.HasRemoteBranch(ctx, absDir, remote, info.CurrentBranch)
+	if hasErr != nil {
+		return "", false
+	}
+	if has {
 		return remote + "/" + info.CurrentBranch, true
 	}
 

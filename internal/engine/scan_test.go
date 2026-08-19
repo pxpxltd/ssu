@@ -627,3 +627,64 @@ func TestScan_AheadSkippedWhenDetached(t *testing.T) {
 		t.Errorf("CommitsAhead = %d, want 0", sub.CommitsAhead)
 	}
 }
+
+// A failed upstream lookup leaves the comparison ref unknown. Falling back to
+// the update target there would count the master/develop divergence as
+// unpushed again, so ahead detection must stop instead.
+func TestScan_AheadSkippedWhenUpstreamLookupFails(t *testing.T) {
+	lookupErr := fmt.Errorf("git failed")
+
+	tests := []struct {
+		name  string
+		setup func(*git.MockGitService)
+	}{
+		{
+			name: "TrackingBranch error",
+			setup: func(m *git.MockGitService) {
+				m.TrackingBranchFn = func(_ context.Context, _ string) (git.TrackingInfo, error) {
+					return git.TrackingInfo{}, lookupErr
+				}
+			},
+		},
+		{
+			name: "RefExists error",
+			setup: func(m *git.MockGitService) {
+				m.TrackingBranchFn = func(_ context.Context, _ string) (git.TrackingInfo, error) {
+					return git.TrackingInfo{Remote: "origin", Branch: "master", Set: true}, nil
+				}
+				m.RefExistsFn = func(_ context.Context, _, _ string) (bool, error) {
+					return false, lookupErr
+				}
+			},
+		},
+		{
+			name: "HasRemoteBranch error",
+			setup: func(m *git.MockGitService) {
+				m.TrackingBranchFn = func(_ context.Context, _ string) (git.TrackingInfo, error) {
+					return git.TrackingInfo{Set: false}, nil
+				}
+				m.HasRemoteBranchFn = func(_ context.Context, _, _, _ string) (bool, error) {
+					return false, lookupErr
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := onMasterMock()
+			tt.setup(mock)
+			mock.CommitsAheadFn = func(_ context.Context, _, _ string) (int, error) {
+				return 5, nil
+			}
+
+			sub := scanOneSub(t, mock)
+			if sub.HasStatus(git.StatusAhead) {
+				t.Error("an unresolvable upstream must not be reported ahead")
+			}
+			if sub.CommitsAhead != 0 {
+				t.Errorf("CommitsAhead = %d, want 0", sub.CommitsAhead)
+			}
+		})
+	}
+}
