@@ -212,10 +212,16 @@ func (e *Engine) scanOne(ctx context.Context, absDir, path string, opts ScanOpts
 	}
 
 	// Commits ahead -> StatusAhead.
-	ahead, err := e.git.CommitsAhead(ctx, absDir, remoteRef)
-	if err == nil && ahead > 0 {
-		info.CommitsAhead = ahead
-		info.Statuses = append(info.Statuses, git.StatusAhead)
+	// Ahead means "commits not yet pushed", so it is measured against the
+	// checked-out branch's own upstream -- never against remoteRef, which
+	// tracks the update target and can be a different branch entirely
+	// (e.g. HEAD on master while the target is develop).
+	if upstreamRef, ok := e.resolveUpstreamRef(ctx, absDir, info, remote, remoteRef); ok {
+		ahead, err := e.git.CommitsAhead(ctx, absDir, upstreamRef)
+		if err == nil && ahead > 0 {
+			info.CommitsAhead = ahead
+			info.Statuses = append(info.Statuses, git.StatusAhead)
+		}
 	}
 
 	// Changelog.
@@ -230,4 +236,41 @@ func (e *Engine) scanOne(ctx context.Context, absDir, path string, opts ScanOpts
 	}
 
 	return info
+}
+
+// resolveUpstreamRef returns the ref that unpushed commits should be counted
+// against for the currently checked-out branch, and whether counting them is
+// meaningful at all.
+//
+// Resolution order:
+//  1. Detached HEAD -- nothing to push, so no count.
+//  2. The configured tracking branch, when its remote-tracking ref still exists.
+//  3. A remote branch with the same name as the current branch.
+//  4. targetRef, for a local-only branch that exists on no remote: every commit
+//     it carries beyond the update target is genuinely unpushed.
+func (e *Engine) resolveUpstreamRef(ctx context.Context, absDir string, info *SubmoduleInfo, remote, targetRef string) (string, bool) {
+	if info.DetachedHead || info.CurrentBranch == "" {
+		return "", false
+	}
+
+	tracking, err := e.git.TrackingBranch(ctx, absDir)
+	if err == nil && tracking.Set && tracking.Branch != "" {
+		trackRemote := tracking.Remote
+		if trackRemote == "" {
+			trackRemote = remote
+		}
+		ref := trackRemote + "/" + tracking.Branch
+		// The upstream may have been deleted on the remote and pruned by the
+		// fetch above, in which case fall through rather than count against
+		// a ref that no longer resolves.
+		if exists, existsErr := e.git.RefExists(ctx, absDir, ref); existsErr == nil && exists {
+			return ref, true
+		}
+	}
+
+	if has, hasErr := e.git.HasRemoteBranch(ctx, absDir, remote, info.CurrentBranch); hasErr == nil && has {
+		return remote + "/" + info.CurrentBranch, true
+	}
+
+	return targetRef, true
 }
