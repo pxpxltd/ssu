@@ -53,11 +53,11 @@ func (e *Engine) Checkout(ctx context.Context, targets []*SubmoduleInfo, opts Ch
 			fire(ProgressEvent{Type: EventStarted, Path: info.Path, Phase: "checkout", Total: total, Done: done})
 
 			var action CheckoutAction
-		if opts.Reset {
-			action = e.checkoutOneReset(ctx, opts, info)
-		} else {
-			action = e.checkoutOne(ctx, opts.RootDir, info, opts.BranchOpts)
-		}
+			if opts.Reset {
+				action = e.checkoutOneReset(ctx, opts, info)
+			} else {
+				action = e.checkoutOne(ctx, opts.RootDir, info, opts.BranchOpts)
+			}
 
 			mu.Lock()
 			done++
@@ -166,9 +166,18 @@ func (e *Engine) checkoutOneReset(ctx context.Context, opts CheckoutOpts, info *
 		}
 	}
 
-	// Check for dirty working tree.
+	// Check for dirty working tree. Reset moves HEAD, so a failure to determine
+	// whether the tree is clean must not be treated as "clean" -- bail out
+	// rather than check out over changes we could not see.
 	dirty, err := e.git.HasLocalChanges(ctx, dir)
-	if err == nil && dirty {
+	if err != nil {
+		return CheckoutAction{
+			Path:   info.Path,
+			Action: "error checking working tree",
+			Error:  err,
+		}
+	}
+	if dirty {
 		return CheckoutAction{
 			Path:   info.Path,
 			Action: "skipped (dirty working tree)",
@@ -178,7 +187,7 @@ func (e *Engine) checkoutOneReset(ctx context.Context, opts CheckoutOpts, info *
 	// Resolve a named branch at the recorded SHA.
 	branchOpts := opts.BranchOpts
 	branchOpts.TargetSHA = recordedSHA
-	branch, _, resolveErr := git.ResolveBranchForCheckout(ctx, e.git, dir, branchOpts)
+	branch, isLocal, resolveErr := git.ResolveBranchForCheckout(ctx, e.git, dir, branchOpts)
 	if resolveErr != nil {
 		return CheckoutAction{
 			Path:   info.Path,
@@ -187,8 +196,22 @@ func (e *Engine) checkoutOneReset(ctx context.Context, opts CheckoutOpts, info *
 		}
 	}
 
+	// A remote-only match is not safe to check out by bare name: `git checkout
+	// <name>` resolves an existing local branch first, and that branch cannot be
+	// at the recorded SHA (it would have resolved as local otherwise). Checking
+	// it out would leave HEAD off the recorded SHA while reporting success, so
+	// detach at the recorded SHA instead.
+	shadowed := ""
+	if branch != "" && !isLocal {
+		exists, existsErr := e.git.RefExists(ctx, dir, "refs/heads/"+branch)
+		if existsErr != nil || exists {
+			shadowed = branch
+			branch = ""
+		}
+	}
+
 	if branch == "" {
-		// No branch points at this SHA -- checkout the SHA directly.
+		// No branch safely points at this SHA -- checkout the SHA directly.
 		shortSHA := recordedSHA
 		if len(shortSHA) > 7 {
 			shortSHA = shortSHA[:7]
@@ -202,9 +225,13 @@ func (e *Engine) checkoutOneReset(ctx context.Context, opts CheckoutOpts, info *
 				Error:    coErr,
 			}
 		}
+		action := fmt.Sprintf("detached at %s", shortSHA)
+		if shadowed != "" {
+			action = fmt.Sprintf("detached at %s (local %s points elsewhere)", shortSHA, shadowed)
+		}
 		return CheckoutAction{
 			Path:     info.Path,
-			Action:   fmt.Sprintf("detached at %s", shortSHA),
+			Action:   action,
 			Detached: true,
 		}
 	}

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -686,5 +687,141 @@ func TestCheckout_ResetContinueOnError(t *testing.T) {
 	}
 	if byPath["plugins/fail"].Error == nil {
 		t.Error("plugins/fail: expected error")
+	}
+}
+
+// A remote-only match whose name is already taken by a local branch must not be
+// checked out by bare name: git would resolve the local branch, which sits on a
+// different commit, leaving HEAD off the recorded SHA.
+func TestCheckout_ResetRemoteMatchShadowedByLocalBranch(t *testing.T) {
+	var checkedOut string
+	mock := &git.MockGitService{
+		HasLocalChangesFn: func(_ context.Context, _ string) (bool, error) {
+			return false, nil
+		},
+		BranchesPointingAtFn: func(_ context.Context, _, sha string) (git.BranchPointsAtResult, error) {
+			if sha == "abc1234567890" {
+				return git.BranchPointsAtResult{
+					Remote: []git.RemoteBranch{{Remote: "origin", Branch: "develop"}},
+				}, nil
+			}
+			return git.BranchPointsAtResult{}, nil
+		},
+		RefExistsFn: func(_ context.Context, _, ref string) (bool, error) {
+			return ref == "refs/heads/develop", nil // local develop exists, elsewhere
+		},
+		CheckoutFn: func(_ context.Context, _, ref string) (git.CheckoutResult, error) {
+			checkedOut = ref
+			return git.CheckoutResult{Branch: ref}, nil
+		},
+	}
+
+	eng := New(mock)
+	result, err := eng.Checkout(context.Background(), []*SubmoduleInfo{
+		{Path: "plugins/auth", CurrentSHA: "oldsha456"},
+	}, CheckoutOpts{
+		RootDir:      "/project",
+		Concurrency:  1,
+		Reset:        true,
+		RecordedSHAs: map[string]string{"plugins/auth": "abc1234567890"},
+	})
+	if err != nil {
+		t.Fatalf("Checkout error: %v", err)
+	}
+
+	if checkedOut != "abc1234567890" {
+		t.Errorf("checked out %q, want the recorded SHA", checkedOut)
+	}
+	action := result.Actions[0]
+	if !action.Detached {
+		t.Error("expected detached checkout at the recorded SHA")
+	}
+	if action.Action != "detached at abc1234 (local develop points elsewhere)" {
+		t.Errorf("unexpected action %q", action.Action)
+	}
+}
+
+// With no local branch of that name, git DWIM creates a tracking branch at the
+// recorded SHA, so checking out by name is safe and preferred.
+func TestCheckout_ResetRemoteMatchWithoutLocalBranch(t *testing.T) {
+	var checkedOut string
+	mock := &git.MockGitService{
+		HasLocalChangesFn: func(_ context.Context, _ string) (bool, error) {
+			return false, nil
+		},
+		BranchesPointingAtFn: func(_ context.Context, _, sha string) (git.BranchPointsAtResult, error) {
+			if sha == "abc1234567890" {
+				return git.BranchPointsAtResult{
+					Remote: []git.RemoteBranch{{Remote: "origin", Branch: "develop"}},
+				}, nil
+			}
+			return git.BranchPointsAtResult{}, nil
+		},
+		RefExistsFn: func(_ context.Context, _, _ string) (bool, error) {
+			return false, nil
+		},
+		CheckoutFn: func(_ context.Context, _, ref string) (git.CheckoutResult, error) {
+			checkedOut = ref
+			return git.CheckoutResult{Branch: ref}, nil
+		},
+	}
+
+	eng := New(mock)
+	result, err := eng.Checkout(context.Background(), []*SubmoduleInfo{
+		{Path: "plugins/auth", CurrentSHA: "oldsha456"},
+	}, CheckoutOpts{
+		RootDir:      "/project",
+		Concurrency:  1,
+		Reset:        true,
+		RecordedSHAs: map[string]string{"plugins/auth": "abc1234567890"},
+	})
+	if err != nil {
+		t.Fatalf("Checkout error: %v", err)
+	}
+
+	if checkedOut != "develop" {
+		t.Errorf("checked out %q, want develop", checkedOut)
+	}
+	if action := result.Actions[0]; action.Action != "checked out develop" || action.Detached {
+		t.Errorf("unexpected action %q (detached=%v)", action.Action, action.Detached)
+	}
+}
+
+// Reset moves HEAD, so an unreadable working tree must abort rather than be
+// treated as clean.
+func TestCheckout_ResetDirtyCheckFails(t *testing.T) {
+	checkoutCalled := false
+	mock := &git.MockGitService{
+		HasLocalChangesFn: func(_ context.Context, _ string) (bool, error) {
+			return false, errors.New("git status failed")
+		},
+		CheckoutFn: func(_ context.Context, _, _ string) (git.CheckoutResult, error) {
+			checkoutCalled = true
+			return git.CheckoutResult{}, nil
+		},
+	}
+
+	eng := New(mock)
+	result, err := eng.Checkout(context.Background(), []*SubmoduleInfo{
+		{Path: "plugins/auth", CurrentSHA: "oldsha456"},
+	}, CheckoutOpts{
+		RootDir:      "/project",
+		Concurrency:  1,
+		Reset:        true,
+		RecordedSHAs: map[string]string{"plugins/auth": "abc1234567890"},
+	})
+	if err != nil {
+		t.Fatalf("Checkout error: %v", err)
+	}
+
+	if checkoutCalled {
+		t.Error("must not check out when the working tree state is unknown")
+	}
+	action := result.Actions[0]
+	if action.Error == nil {
+		t.Error("expected an error action")
+	}
+	if action.Action != "error checking working tree" {
+		t.Errorf("unexpected action %q", action.Action)
 	}
 }

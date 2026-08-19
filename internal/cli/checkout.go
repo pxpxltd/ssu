@@ -434,6 +434,7 @@ func runResetDryRun(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit
 		recordedSHA  string
 		targetBranch string
 		detached     bool
+		resolveErr   error
 	}
 
 	var targets []resetTarget
@@ -448,12 +449,15 @@ func runResetDryRun(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit
 		dir := scanOpts.RootDir + "/" + sm.Path
 		opts := branchOpts
 		opts.TargetSHA = recorded
-		branch, _, _ := git.ResolveBranchForCheckout(ctx, gitSvc, dir, opts)
+		branch, _, resolveErr := git.ResolveBranchForCheckout(ctx, gitSvc, dir, opts)
 		targets = append(targets, resetTarget{
 			info:         sm,
 			recordedSHA:  recorded,
 			targetBranch: branch,
-			detached:     branch == "",
+			// Only call it detached when resolution actually found no branch --
+			// a failed lookup is unknown, not detached.
+			detached:   resolveErr == nil && branch == "",
+			resolveErr: resolveErr,
 		})
 	}
 
@@ -476,7 +480,10 @@ func runResetDryRun(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit
 		}
 		recordedCol := shortSHA(tgt.recordedSHA)
 		branchCol := tgt.targetBranch
-		if tgt.detached {
+		switch {
+		case tgt.resolveErr != nil:
+			branchCol = "(resolution failed)"
+		case tgt.detached:
 			branchCol = recordedCol + " (detached)"
 		}
 		t.Row(tgt.info.Path, currentCol, recordedCol, branchCol)
@@ -491,6 +498,12 @@ func runResetDryRun(ctx context.Context, eng *engine.Engine, gitSvc *git.ExecGit
 
 	fmt.Fprintln(cmd.OutOrStdout(), t.Render())
 	fmt.Fprintf(cmd.OutOrStdout(), "\n%d submodule(s) would be reset (dry-run)\n", len(targets))
+
+	for _, tgt := range targets {
+		if tgt.resolveErr != nil {
+			pr.Warningf("%s -- could not resolve target branch: %v", tgt.info.Path, tgt.resolveErr)
+		}
+	}
 	return nil
 }
 
