@@ -47,6 +47,7 @@ type SubmoduleInfo struct {
 	// Pull request lookup (populated by AttachPullRequests only).
 	PRChecked    bool                 // True if a PR lookup was attempted
 	PullRequests []github.PullRequest // Open PRs on the module's repository
+	PRsTruncated bool                 // True if the repository has more open PRs than were fetched
 	PRError      error                // Non-nil if the PR lookup failed
 }
 

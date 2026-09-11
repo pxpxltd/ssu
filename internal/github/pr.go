@@ -13,7 +13,8 @@ import (
 	"time"
 )
 
-// prListLimit caps how many open PRs are requested per repository.
+// prListLimit caps how many open PRs are returned per repository. One more
+// is requested so a longer list can be reported as truncated.
 const prListLimit = 100
 
 // prJSONFields are the gh --json fields decoded by parsePRList.
@@ -64,17 +65,19 @@ func (g *ExecGH) Available() error {
 	return nil
 }
 
-// OpenPRs returns the open pull requests of the repository behind remoteURL.
-func (g *ExecGH) OpenPRs(ctx context.Context, remoteURL string) ([]PullRequest, error) {
+// OpenPRs returns the open pull requests of the repository behind remoteURL,
+// newest first. At most prListLimit are returned; truncated reports whether
+// the repository has more.
+func (g *ExecGH) OpenPRs(ctx context.Context, remoteURL string) (prs []PullRequest, truncated bool, err error) {
 	remote, err := ParseRemoteURL(remoteURL)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	repo := remote.Repo
 	if remote.SSH && repo.Host != DefaultHost {
 		repo.Host = g.resolveSSHHost(ctx, repo.Host)
 		if nonGitHubHosts[repo.Host] {
-			return nil, fmt.Errorf("not a GitHub remote (%s)", repo.Host)
+			return nil, false, fmt.Errorf("not a GitHub remote (%s)", repo.Host)
 		}
 	}
 
@@ -87,7 +90,7 @@ func (g *ExecGH) OpenPRs(ctx context.Context, remoteURL string) ([]PullRequest, 
 	cmd := exec.CommandContext(ctx, g.ghBin(), "pr", "list",
 		"-R", repo.Slug(),
 		"--state", "open",
-		"--limit", fmt.Sprint(prListLimit),
+		"--limit", fmt.Sprint(prListLimit+1),
 		"--json", prJSONFields)
 	cmd.WaitDelay = 5 * time.Second
 	cmd.Env = append(os.Environ(), "GH_PROMPT_DISABLED=1", "NO_COLOR=1")
@@ -98,15 +101,22 @@ func (g *ExecGH) OpenPRs(ctx context.Context, remoteURL string) ([]PullRequest, 
 
 	if err := cmd.Run(); err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return nil, fmt.Errorf("gh pr list for %s timed out", repo.Slug())
+			return nil, false, fmt.Errorf("gh pr list for %s timed out", repo.Slug())
 		}
 		if msg := firstLine(errBuf.String()); msg != "" {
-			return nil, errors.New(msg)
+			return nil, false, errors.New(msg)
 		}
-		return nil, fmt.Errorf("gh pr list for %s: %w", repo.Slug(), err)
+		return nil, false, fmt.Errorf("gh pr list for %s: %w", repo.Slug(), err)
 	}
 
-	return parsePRList(outBuf.Bytes())
+	prs, err = parsePRList(outBuf.Bytes())
+	if err != nil {
+		return nil, false, err
+	}
+	if len(prs) > prListLimit {
+		return prs[:prListLimit], true, nil
+	}
+	return prs, false, nil
 }
 
 // resolveSSHHost maps an ssh alias (e.g. "github-work" from ~/.ssh/config)

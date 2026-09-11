@@ -185,7 +185,11 @@ the [GitHub CLI](https://cli.github.com), so `gh` must be installed and logged i
 (`gh auth login --hostname <host>`), and SSH host aliases from `~/.ssh/config`
 are resolved automatically. Modules whose lookup fails, such as those hosted
 elsewhere (GitLab, Bitbucket), are listed last under **Skipped** with the reason.
-With `--json`, each module gets a `pull_requests` array (or a `pr_error` message).
+With `--json`, each module that was looked up gets either a `pull_requests` array
+or a `pr_error` message; missing and skipped modules omit both. At most 100 open
+PRs are listed per repository. If there are more, the count shows as `100+`,
+the list links to the repository's pull requests page, and the JSON sets
+`pull_requests_truncated: true`.
 
 ### Share a Development Stack
 

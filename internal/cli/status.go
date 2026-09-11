@@ -260,8 +260,9 @@ func printStatusTable(w io.Writer, result *engine.ScanResult, showPRs bool) erro
 	return nil
 }
 
-// prCell returns the PRs column value: the open PR count, "-" for none,
-// "?" if the lookup failed, and empty if the module was not looked up.
+// prCell returns the PRs column value: the open PR count ("N+" if the list
+// was truncated), "-" for none, "?" if the lookup failed, and empty if the
+// module was not looked up.
 func prCell(info *engine.SubmoduleInfo) string {
 	switch {
 	case !info.PRChecked:
@@ -270,6 +271,8 @@ func prCell(info *engine.SubmoduleInfo) string {
 		return "?"
 	case len(info.PullRequests) == 0:
 		return "-"
+	case info.PRsTruncated:
+		return strconv.Itoa(len(info.PullRequests)) + "+"
 	default:
 		return strconv.Itoa(len(info.PullRequests))
 	}
@@ -351,6 +354,14 @@ func printPRList(w io.Writer, result *engine.ScanResult) {
 			fmt.Fprintf(w, "  %s  ", strings.Repeat(" ", numW))
 			output.Info.Fprintln(w, pr.URL)
 		}
+
+		if info.PRsTruncated {
+			more := fmt.Sprintf("  %s more open pull requests not shown", output.Ellipsis)
+			if pulls := repoPullsURL(info.PullRequests[0].URL); pulls != "" {
+				more += ", see " + pulls
+			}
+			output.Muted.Fprintln(w, more)
+		}
 	}
 
 	if len(withPRs) == 0 {
@@ -367,6 +378,16 @@ func printPRList(w io.Writer, result *engine.ScanResult) {
 		output.Bold.Fprintln(w, prModuleName(info))
 		output.Error.Fprintf(w, "  ! %s\n", firstErrorLine(info.PRError))
 	}
+}
+
+// repoPullsURL derives the repository's pull request listing from one PR URL
+// (".../owner/repo/pull/12" -> ".../owner/repo/pulls"), or "" if it cannot.
+func repoPullsURL(prURL string) string {
+	i := strings.LastIndex(prURL, "/pull/")
+	if i < 0 {
+		return ""
+	}
+	return prURL[:i] + "/pulls"
 }
 
 // prModuleName returns the module label used in the PR list.
@@ -446,6 +467,7 @@ type submoduleJSON struct {
 	// Present only with --pr. A pointer so a module with no open PRs emits
 	// [] while modules that were not looked up omit the field.
 	PullRequests *[]pullRequestJSON `json:"pull_requests,omitempty"`
+	PRsTruncated bool               `json:"pull_requests_truncated,omitempty"`
 	PRError      string             `json:"pr_error,omitempty"`
 }
 
@@ -494,6 +516,7 @@ func toSubmoduleJSON(info *engine.SubmoduleInfo) *submoduleJSON {
 				})
 			}
 			out.PullRequests = &prs
+			out.PRsTruncated = info.PRsTruncated
 		}
 	}
 	return out

@@ -12,20 +12,21 @@ import (
 
 // fakeLister returns canned PRs (or errors) keyed by remote URL.
 type fakeLister struct {
-	mu    sync.Mutex
-	prs   map[string][]github.PullRequest
-	errs  map[string]error
-	calls []string
+	mu        sync.Mutex
+	prs       map[string][]github.PullRequest
+	truncated map[string]bool
+	errs      map[string]error
+	calls     []string
 }
 
-func (f *fakeLister) OpenPRs(_ context.Context, remoteURL string) ([]github.PullRequest, error) {
+func (f *fakeLister) OpenPRs(_ context.Context, remoteURL string) ([]github.PullRequest, bool, error) {
 	f.mu.Lock()
 	f.calls = append(f.calls, remoteURL)
 	f.mu.Unlock()
 	if err := f.errs[remoteURL]; err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return f.prs[remoteURL], nil
+	return f.prs[remoteURL], f.truncated[remoteURL], nil
 }
 
 // urlMock returns "url:<dir>" as the origin URL of every directory, except
@@ -62,6 +63,7 @@ func TestAttachPullRequests(t *testing.T) {
 			"url:/project":       {{Number: 41, Title: "Bump deps"}},
 			"url:/project/mod-a": {{Number: 12, Title: "SSO"}, {Number: 9, Title: "Fix"}},
 		},
+		truncated: map[string]bool{"url:/project/mod-a": true},
 		errs: map[string]error{
 			"url:/project/mod-fail": errors.New("not a GitHub remote (gitlab.com)"),
 		},
@@ -89,8 +91,11 @@ func TestAttachPullRequests(t *testing.T) {
 		byPath[sm.Path] = sm
 	}
 
-	if a := byPath["mod-a"]; !a.PRChecked || len(a.PullRequests) != 2 || a.PRError != nil {
-		t.Errorf("mod-a: expected 2 PRs, got checked=%v prs=%v err=%v", a.PRChecked, a.PullRequests, a.PRError)
+	if a := byPath["mod-a"]; !a.PRChecked || len(a.PullRequests) != 2 || !a.PRsTruncated || a.PRError != nil {
+		t.Errorf("mod-a: expected 2 truncated PRs, got checked=%v prs=%v truncated=%v err=%v", a.PRChecked, a.PullRequests, a.PRsTruncated, a.PRError)
+	}
+	if result.Root.PRsTruncated {
+		t.Error("root: should not be truncated")
 	}
 	if b := byPath["mod-b"]; !b.PRChecked || len(b.PullRequests) != 0 || b.PRError != nil {
 		t.Errorf("mod-b: expected checked with no PRs, got checked=%v prs=%v err=%v", b.PRChecked, b.PullRequests, b.PRError)

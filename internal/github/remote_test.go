@@ -1,6 +1,9 @@
 package github
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseRemoteURL(t *testing.T) {
 	tests := []struct {
@@ -74,6 +77,44 @@ func TestRepoSlug(t *testing.T) {
 	for _, tt := range tests {
 		if got := tt.repo.Slug(); got != tt.want {
 			t.Errorf("Slug(%+v) = %q, want %q", tt.repo, got, tt.want)
+		}
+	}
+}
+
+// Errors end up in terminal and JSON output, so tokens in HTTPS remotes must
+// never appear in them.
+func TestParseRemoteURL_ErrorsRedactCredentials(t *testing.T) {
+	for _, raw := range []string{
+		"https://user:s3cret@github.com/pxpxltd",   // no repo
+		"https://user:s3cret@github.com:bad/x/y",   // url.Parse failure
+		"ftp://user:s3cret@github.com/pxpxltd/ssu", // unsupported scheme
+		"s3cret@github.com",                        // no colon, scp-like
+		"user:s3cret@github.com:pxpxltd",           // scp-like with password
+	} {
+		_, err := ParseRemoteURL(raw)
+		if err == nil {
+			t.Errorf("%q: expected error", raw)
+			continue
+		}
+		if strings.Contains(err.Error(), "s3cret") {
+			t.Errorf("%q: error leaks credentials: %v", raw, err)
+		}
+	}
+}
+
+func TestRedactURL(t *testing.T) {
+	tests := []struct{ raw, want string }{
+		{"https://user:tok@github.com/o/r.git", "https://github.com/o/r.git"},
+		{"https://tok@github.com/o/r", "https://github.com/o/r"},
+		{"https://github.com/o/r", "https://github.com/o/r"},
+		{"https://github.com/o/r@v1", "https://github.com/o/r@v1"},
+		{"ssh://git@github.com:22/o/r", "ssh://github.com:22/o/r"},
+		{"git@github.com:o/r.git", "github.com:o/r.git"},
+		{"user:tok@host", "host"},
+	}
+	for _, tt := range tests {
+		if got := redactURL(tt.raw); got != tt.want {
+			t.Errorf("redactURL(%q) = %q, want %q", tt.raw, got, tt.want)
 		}
 	}
 }

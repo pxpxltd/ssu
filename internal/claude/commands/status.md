@@ -27,7 +27,7 @@ ssu status --pr
 ssu status --pr --json
 ```
 
-With `--pr --json`, each module carries a `pull_requests` array (number, title, url, head_branch, base_branch, author, draft) or a `pr_error` message.
+With `--pr --json`, each module that was looked up carries either a `pull_requests` array (number, title, url, head_branch, base_branch, author, draft) or a `pr_error` message; missing and skipped modules omit both. `pull_requests_truncated: true` means the repository has more than the 100 PRs listed.
 
 Report the results clearly, highlighting:
 - Submodules that need updates (pending)

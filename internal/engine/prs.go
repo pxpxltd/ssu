@@ -16,7 +16,7 @@ import (
 // PRLister lists open pull requests for the repository behind a remote URL.
 // Implementations: github.ExecGH (production), fakes in tests.
 type PRLister interface {
-	OpenPRs(ctx context.Context, remoteURL string) ([]github.PullRequest, error)
+	OpenPRs(ctx context.Context, remoteURL string) (prs []github.PullRequest, truncated bool, err error)
 }
 
 // PROpts configures an AttachPullRequests operation.
@@ -87,7 +87,7 @@ func (e *Engine) AttachPullRequests(ctx context.Context, lister PRLister, result
 			if err != nil {
 				err = fmt.Errorf("cannot read URL of remote %q: %w", remote, err)
 			} else {
-				info.PullRequests, err = lister.OpenPRs(ctx, url)
+				info.PullRequests, info.PRsTruncated, err = lister.OpenPRs(ctx, url)
 			}
 			info.PRError = err
 

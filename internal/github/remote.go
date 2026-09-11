@@ -58,16 +58,18 @@ func ParseRemoteURL(raw string) (RemoteURL, error) {
 	var ssh bool
 
 	if strings.Contains(raw, "://") {
+		// The parse error embeds the raw URL, so it is dropped rather than
+		// wrapped: see redactURL.
 		u, err := url.Parse(raw)
 		if err != nil {
-			return RemoteURL{}, fmt.Errorf("invalid remote URL %q: %w", raw, err)
+			return RemoteURL{}, fmt.Errorf("invalid remote URL %q", redactURL(raw))
 		}
 		switch u.Scheme {
 		case "ssh", "git+ssh", "ssh+git":
 			ssh = true
 		case "https", "http", "git":
 		default:
-			return RemoteURL{}, fmt.Errorf("unsupported remote URL %q", raw)
+			return RemoteURL{}, fmt.Errorf("unsupported remote URL %q", redactURL(raw))
 		}
 		host = u.Hostname()
 		path = u.Path
@@ -76,7 +78,7 @@ func ParseRemoteURL(raw string) (RemoteURL, error) {
 		// before it means this is a local path rather than a remote.
 		colon := strings.Index(raw, ":")
 		if colon < 0 || strings.Contains(raw[:colon], "/") {
-			return RemoteURL{}, fmt.Errorf("unsupported remote URL %q", raw)
+			return RemoteURL{}, fmt.Errorf("unsupported remote URL %q", redactURL(raw))
 		}
 		host = raw[:colon]
 		if at := strings.LastIndex(host, "@"); at >= 0 {
@@ -90,7 +92,7 @@ func ParseRemoteURL(raw string) (RemoteURL, error) {
 	path = strings.TrimSuffix(strings.Trim(path, "/"), ".git")
 	parts := strings.Split(path, "/")
 	if host == "" || len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return RemoteURL{}, fmt.Errorf("cannot find owner/repo in remote URL %q", raw)
+		return RemoteURL{}, fmt.Errorf("cannot find owner/repo in remote URL %q", redactURL(raw))
 	}
 	if nonGitHubHosts[host] {
 		return RemoteURL{}, fmt.Errorf("not a GitHub remote (%s)", host)
@@ -100,4 +102,22 @@ func ParseRemoteURL(raw string) (RemoteURL, error) {
 		Repo: Repo{Host: host, Owner: parts[0], Name: parts[1]},
 		SSH:  ssh,
 	}, nil
+}
+
+// redactURL strips user info from a remote URL so it is safe to show in
+// errors, which end up in terminal and JSON output. HTTPS remotes can carry
+// a token there (https://user:token@host/...).
+func redactURL(raw string) string {
+	prefix, rest := "", raw
+	if i := strings.Index(raw, "://"); i >= 0 {
+		prefix, rest = raw[:i+3], raw[i+3:]
+	}
+	end := strings.Index(rest, "/")
+	if end < 0 {
+		end = len(rest)
+	}
+	if at := strings.LastIndex(rest[:end], "@"); at >= 0 {
+		rest = rest[at+1:]
+	}
+	return prefix + rest
 }

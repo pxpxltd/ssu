@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -79,12 +80,18 @@ func writeScript(t *testing.T, name, body string) string {
 }
 
 // fakeGH returns a gh stand-in that records its arguments (one per line)
-// into the returned file and prints the fixture.
+// into the returned file and prints prFixture.
 func fakeGH(t *testing.T) (bin, argsFile string) {
+	t.Helper()
+	return fakeGHWith(t, prFixture)
+}
+
+// fakeGHWith is fakeGH with a custom JSON response.
+func fakeGHWith(t *testing.T, response string) (bin, argsFile string) {
 	t.Helper()
 	argsFile = filepath.Join(t.TempDir(), "args")
 	fixture := filepath.Join(t.TempDir(), "fixture.json")
-	if err := os.WriteFile(fixture, []byte(prFixture), 0o644); err != nil {
+	if err := os.WriteFile(fixture, []byte(response), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	bin = writeScript(t, "gh", `printf '%s\n' "$@" > '`+argsFile+`'
@@ -115,12 +122,15 @@ func TestExecGHOpenPRs(t *testing.T) {
 	bin, argsFile := fakeGH(t)
 	g := &ExecGH{GHBin: bin}
 
-	prs, err := g.OpenPRs(context.Background(), "https://github.com/pxpxltd/auth.git")
+	prs, truncated, err := g.OpenPRs(context.Background(), "https://github.com/pxpxltd/auth.git")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(prs) != 2 || prs[0].Number != 12 || !prs[1].Draft {
 		t.Errorf("unexpected PRs: %+v", prs)
+	}
+	if truncated {
+		t.Error("two PRs should not be reported as truncated")
 	}
 
 	args := readArgs(t, argsFile)
@@ -136,13 +146,40 @@ func TestExecGHOpenPRs(t *testing.T) {
 	if got := argAfter(args, "--json"); got != prJSONFields {
 		t.Errorf("--json = %q, want %q", got, prJSONFields)
 	}
+	// One more than the cap, so truncation can be detected.
+	if got := argAfter(args, "--limit"); got != fmt.Sprint(prListLimit+1) {
+		t.Errorf("--limit = %q, want %d", got, prListLimit+1)
+	}
+}
+
+func TestExecGHOpenPRs_Truncated(t *testing.T) {
+	items := make([]string, prListLimit+1)
+	for i := range items {
+		items[i] = fmt.Sprintf(`{"number": %d, "title": "t", "url": "u"}`, len(items)-i)
+	}
+	bin, _ := fakeGHWith(t, "["+strings.Join(items, ",")+"]")
+	g := &ExecGH{GHBin: bin}
+
+	prs, truncated, err := g.OpenPRs(context.Background(), "git@github.com:pxpxltd/auth.git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !truncated {
+		t.Error("expected truncated=true when gh returns more than the cap")
+	}
+	if len(prs) != prListLimit {
+		t.Errorf("expected %d PRs, got %d", prListLimit, len(prs))
+	}
+	if prs[0].Number != prListLimit+1 {
+		t.Errorf("expected newest PR kept first, got #%d", prs[0].Number)
+	}
 }
 
 func TestExecGHOpenPRs_EnterpriseHost(t *testing.T) {
 	bin, argsFile := fakeGH(t)
 	g := &ExecGH{GHBin: bin}
 
-	if _, err := g.OpenPRs(context.Background(), "https://ghe.example.com/team/app.git"); err != nil {
+	if _, _, err := g.OpenPRs(context.Background(), "https://ghe.example.com/team/app.git"); err != nil {
 		t.Fatal(err)
 	}
 	if got := argAfter(readArgs(t, argsFile), "-R"); got != "ghe.example.com/team/app" {
@@ -158,7 +195,7 @@ echo "port 22"
 `)
 	g := &ExecGH{GHBin: bin, SSHBin: ssh}
 
-	if _, err := g.OpenPRs(context.Background(), "git@github-work:pxpxltd/auth.git"); err != nil {
+	if _, _, err := g.OpenPRs(context.Background(), "git@github-work:pxpxltd/auth.git"); err != nil {
 		t.Fatal(err)
 	}
 	if got := argAfter(readArgs(t, argsFile), "-R"); got != "pxpxltd/auth" {
@@ -172,7 +209,7 @@ func TestExecGHOpenPRs_SSHAliasToNonGitHub(t *testing.T) {
 `)
 	g := &ExecGH{GHBin: bin, SSHBin: ssh}
 
-	_, err := g.OpenPRs(context.Background(), "git@work-gitlab:team/app.git")
+	_, _, err := g.OpenPRs(context.Background(), "git@work-gitlab:team/app.git")
 	if err == nil || err.Error() != "not a GitHub remote (gitlab.com)" {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -182,7 +219,7 @@ func TestExecGHOpenPRs_SSHUnavailableKeepsHost(t *testing.T) {
 	bin, argsFile := fakeGH(t)
 	g := &ExecGH{GHBin: bin, SSHBin: filepath.Join(t.TempDir(), "no-ssh")}
 
-	if _, err := g.OpenPRs(context.Background(), "git@ghe.example.com:team/app.git"); err != nil {
+	if _, _, err := g.OpenPRs(context.Background(), "git@ghe.example.com:team/app.git"); err != nil {
 		t.Fatal(err)
 	}
 	if got := argAfter(readArgs(t, argsFile), "-R"); got != "ghe.example.com/team/app" {
@@ -198,7 +235,7 @@ exit 4
 `)
 	g := &ExecGH{GHBin: bin}
 
-	_, err := g.OpenPRs(context.Background(), "git@github.com:pxpxltd/auth.git")
+	_, _, err := g.OpenPRs(context.Background(), "git@github.com:pxpxltd/auth.git")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -209,7 +246,7 @@ exit 4
 
 func TestExecGHOpenPRs_BadRemote(t *testing.T) {
 	g := &ExecGH{GHBin: filepath.Join(t.TempDir(), "never-called")}
-	if _, err := g.OpenPRs(context.Background(), "git@gitlab.com:team/app.git"); err == nil {
+	if _, _, err := g.OpenPRs(context.Background(), "git@gitlab.com:team/app.git"); err == nil {
 		t.Error("expected error for non-GitHub remote")
 	}
 }

@@ -265,3 +265,48 @@ func TestPrintStatusJSON_WithoutPRLookup(t *testing.T) {
 		t.Errorf("PR fields should be absent without --pr:\n%s", buf.String())
 	}
 }
+
+func TestPRsTruncated(t *testing.T) {
+	disableColor(t)
+	result := &engine.ScanResult{
+		Submodules: []*engine.SubmoduleInfo{{
+			Path: "big", Statuses: []git.SubmoduleStatus{git.StatusCurrent},
+			PRChecked: true, PRsTruncated: true,
+			PullRequests: []github.PullRequest{
+				{Number: 7, Title: "a", URL: "https://github.com/o/big/pull/7", BaseBranch: "main", HeadBranch: "x"},
+				{Number: 6, Title: "b", URL: "https://github.com/o/big/pull/6", BaseBranch: "main", HeadBranch: "y"},
+			},
+		}},
+	}
+
+	var table bytes.Buffer
+	if err := printStatusTable(&table, result, true); err != nil {
+		t.Fatal(err)
+	}
+	if row := tableRow(t, table.String(), "big"); row[4] != "2+" {
+		t.Errorf("truncated count should read 2+, got %q", row[4])
+	}
+
+	var list bytes.Buffer
+	printPRList(&list, result)
+	if !strings.Contains(list.String(), "… more open pull requests not shown, see https://github.com/o/big/pulls") {
+		t.Errorf("expected truncation note, got:\n%s", list.String())
+	}
+
+	var js bytes.Buffer
+	if err := printStatusJSON(&js, result); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(js.String(), `"pull_requests_truncated": true`) {
+		t.Errorf("expected pull_requests_truncated in JSON:\n%s", js.String())
+	}
+}
+
+func TestRepoPullsURL(t *testing.T) {
+	if got := repoPullsURL("https://github.com/o/r/pull/12"); got != "https://github.com/o/r/pulls" {
+		t.Errorf("got %q", got)
+	}
+	if got := repoPullsURL("nonsense"); got != "" {
+		t.Errorf("got %q", got)
+	}
+}
