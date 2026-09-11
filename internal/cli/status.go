@@ -296,8 +296,9 @@ func prCellStyle(info *engine.SubmoduleInfo) lipgloss.Style {
 // prTitleMaxRunes caps PR title length in the list so rows stay on one line.
 const prTitleMaxRunes = 60
 
-// printPRList prints the open pull requests of every module that has any
-// (or whose lookup failed), root first, each with its URL on its own line.
+// printPRList prints the open pull requests of every module that has any,
+// root first, each with its URL on its own line. Modules whose lookup failed
+// follow in a separate "Skipped" section with the reason.
 func printPRList(w io.Writer, result *engine.ScanResult) {
 	var infos []*engine.SubmoduleInfo
 	if result.Root != nil {
@@ -305,27 +306,23 @@ func printPRList(w io.Writer, result *engine.ScanResult) {
 	}
 	infos = append(infos, result.Submodules...)
 
+	var withPRs, failed []*engine.SubmoduleInfo
+	for _, info := range infos {
+		switch {
+		case !info.PRChecked:
+		case info.PRError != nil:
+			failed = append(failed, info)
+		case len(info.PullRequests) > 0:
+			withPRs = append(withPRs, info)
+		}
+	}
+
 	fmt.Fprintln(w)
 	output.Bold.Fprintln(w, "Open pull requests")
 	fmt.Fprintln(w)
 
-	listed := 0
-	for _, info := range infos {
-		if !info.PRChecked || (info.PRError == nil && len(info.PullRequests) == 0) {
-			continue
-		}
-		listed++
-
-		name := info.Path
-		if info.IsRoot {
-			name = "(root)"
-		}
-		output.Bold.Fprintln(w, name)
-
-		if info.PRError != nil {
-			output.Error.Fprintf(w, "  ! %s\n", firstErrorLine(info.PRError))
-			continue
-		}
+	for _, info := range withPRs {
+		output.Bold.Fprintln(w, prModuleName(info))
 
 		// Pad number, title and branch columns to align within the module.
 		numW, titleW, branchW := 0, 0, 0
@@ -356,9 +353,28 @@ func printPRList(w io.Writer, result *engine.ScanResult) {
 		}
 	}
 
-	if listed == 0 {
+	if len(withPRs) == 0 {
 		output.Muted.Fprintln(w, "No open pull requests.")
 	}
+
+	if len(failed) == 0 {
+		return
+	}
+	fmt.Fprintln(w)
+	output.Bold.Fprintln(w, "Skipped")
+	fmt.Fprintln(w)
+	for _, info := range failed {
+		output.Bold.Fprintln(w, prModuleName(info))
+		output.Error.Fprintf(w, "  ! %s\n", firstErrorLine(info.PRError))
+	}
+}
+
+// prModuleName returns the module label used in the PR list.
+func prModuleName(info *engine.SubmoduleInfo) string {
+	if info.IsRoot {
+		return "(root)"
+	}
+	return info.Path
 }
 
 func prNumber(pr github.PullRequest) string {

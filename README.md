@@ -183,9 +183,9 @@ The repository is taken from each module's `origin` remote. Lookups go through
 the [GitHub CLI](https://cli.github.com), so `gh` must be installed and logged in
 (`gh auth login`). GitHub Enterprise hosts work once gh is logged in to them
 (`gh auth login --hostname <host>`), and SSH host aliases from `~/.ssh/config`
-are resolved automatically. Modules hosted elsewhere (GitLab, Bitbucket) are
-reported as not a GitHub remote. With `--json`, each module gets a
-`pull_requests` array (or a `pr_error` message).
+are resolved automatically. Modules whose lookup fails, such as those hosted
+elsewhere (GitLab, Bitbucket), are listed last under **Skipped** with the reason.
+With `--json`, each module gets a `pull_requests` array (or a `pr_error` message).
 
 ### Share a Development Stack
 

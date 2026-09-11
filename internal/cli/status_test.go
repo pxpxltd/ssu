@@ -23,8 +23,9 @@ func disableColor(t *testing.T) {
 	t.Cleanup(func() { color.NoColor = prev })
 }
 
-// prScanResult builds a scan result after a --pr lookup: root with one PR,
-// a module with two (one draft), one with none, one failed, one missing.
+// prScanResult builds a scan result after a --pr lookup: a failed module
+// sorted first, root with one PR, a module with two (one draft), one with
+// none, and one missing.
 func prScanResult() *engine.ScanResult {
 	current := []git.SubmoduleStatus{git.StatusCurrent}
 	return &engine.ScanResult{
@@ -37,6 +38,10 @@ func prScanResult() *engine.ScanResult {
 		},
 		Submodules: []*engine.SubmoduleInfo{
 			{
+				Path: "lib/legacy", CurrentBranch: "main", Statuses: current,
+				PRChecked: true, PRError: errors.New("not a GitHub remote (gitlab.com)\nsecond line"),
+			},
+			{
 				Path: "plugins/auth", CurrentBranch: "feat/sso", Statuses: []git.SubmoduleStatus{git.StatusAhead},
 				PRChecked: true,
 				PullRequests: []github.PullRequest{
@@ -45,10 +50,6 @@ func prScanResult() *engine.ScanResult {
 				},
 			},
 			{Path: "plugins/blog", CurrentBranch: "develop", Statuses: current, PRChecked: true},
-			{
-				Path: "vendor/lib", CurrentBranch: "main", Statuses: current,
-				PRChecked: true, PRError: errors.New("not a GitHub remote (gitlab.com)\nsecond line"),
-			},
 			{Path: "vendor/missing", Statuses: []git.SubmoduleStatus{git.StatusMissing}},
 		},
 	}
@@ -107,7 +108,7 @@ func TestPrintStatusTable_WithPRs(t *testing.T) {
 		{"(root)", "1", "current"},
 		{"plugins/auth", "2", "ahead"},
 		{"plugins/blog", "-", "current"},
-		{"vendor/lib", "?", "current"},
+		{"lib/legacy", "?", "current"},
 		{"vendor/missing", "", "missing"},
 	}
 	for _, tt := range tests {
@@ -135,7 +136,10 @@ plugins/auth
        https://github.com/pxpxltd/auth/pull/12
   #9   Fix token refresh (draft)  develop <- fix/refresh  @carol
        https://github.com/pxpxltd/auth/pull/9
-vendor/lib
+
+Skipped
+
+lib/legacy
   ! not a GitHub remote (gitlab.com)
 `
 	if out != want {
@@ -153,6 +157,35 @@ func TestPrintPRList_None(t *testing.T) {
 	printPRList(&buf, result)
 	if !strings.Contains(buf.String(), "No open pull requests.") {
 		t.Errorf("expected empty message, got:\n%s", buf.String())
+	}
+	if strings.Contains(buf.String(), "Skipped") {
+		t.Errorf("Skipped section should be absent without failures:\n%s", buf.String())
+	}
+}
+
+func TestPrintPRList_NoneButFailed(t *testing.T) {
+	disableColor(t)
+	result := &engine.ScanResult{
+		Submodules: []*engine.SubmoduleInfo{
+			{Path: "a", PRChecked: true, PRError: errors.New("boom")},
+			{Path: "b", PRChecked: true},
+		},
+	}
+	var buf bytes.Buffer
+	printPRList(&buf, result)
+
+	want := `
+Open pull requests
+
+No open pull requests.
+
+Skipped
+
+a
+  ! boom
+`
+	if buf.String() != want {
+		t.Errorf("unexpected PR list.\ngot:\n%s\nwant:\n%s", buf.String(), want)
 	}
 }
 
@@ -208,10 +241,10 @@ func TestPrintStatusJSON_PullRequests(t *testing.T) {
 	if got := string(byPath["plugins/blog"]["pull_requests"]); got != "[]" {
 		t.Errorf("checked module with no PRs should emit [], got %q", got)
 	}
-	if got := string(byPath["vendor/lib"]["pr_error"]); got != `"not a GitHub remote (gitlab.com)"` {
+	if got := string(byPath["lib/legacy"]["pr_error"]); got != `"not a GitHub remote (gitlab.com)"` {
 		t.Errorf("unexpected pr_error: %s", got)
 	}
-	if _, ok := byPath["vendor/lib"]["pull_requests"]; ok {
+	if _, ok := byPath["lib/legacy"]["pull_requests"]; ok {
 		t.Error("failed lookup should not emit pull_requests")
 	}
 	if _, ok := byPath["vendor/missing"]["pull_requests"]; ok {
