@@ -32,6 +32,7 @@ type GitService interface {
 	TrackingBranch(ctx context.Context, dir string) (TrackingInfo, error)
 	RefExists(ctx context.Context, dir, ref string) (bool, error)
 	IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error)
+	RemoteURL(ctx context.Context, dir, remote string) (string, error)
 
 	// Status queries
 	HasLocalChanges(ctx context.Context, dir string) (bool, error)

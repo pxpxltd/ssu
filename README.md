@@ -146,6 +146,7 @@ View the current state of all submodules:
 ```bash
 ssu status          # Colorized table
 ssu status --json   # JSON output (for scripting)
+ssu status --pr     # Also list open GitHub pull requests, with links
 ```
 
 The status table shows:
@@ -158,6 +159,33 @@ Status indicators:
 - **modified** (yellow) - Has local uncommitted changes
 - **ahead** (magenta) - Has unpushed commits
 - **conflict** (red) - Merge conflict detected
+
+#### Open pull requests
+
+`ssu status --pr` adds a **PRs** column with the number of open pull requests on
+each module's repository (`-` means none, `?` means the lookup failed), and lists
+them below the table with their branches, author and URL:
+
+```
+Open pull requests
+
+(root)
+  #41  Bump deps                  develop <- chore/deps   @alice
+       https://github.com/pxpxltd/app/pull/41
+plugins/auth
+  #12  SSO login                  develop <- feat/sso     @bob
+       https://github.com/pxpxltd/auth/pull/12
+  #9   Fix token refresh (draft)  develop <- fix/refresh  @carol
+       https://github.com/pxpxltd/auth/pull/9
+```
+
+The repository is taken from each module's `origin` remote. Lookups go through
+the [GitHub CLI](https://cli.github.com), so `gh` must be installed and logged in
+(`gh auth login`). GitHub Enterprise hosts work once gh is logged in to them
+(`gh auth login --hostname <host>`), and SSH host aliases from `~/.ssh/config`
+are resolved automatically. Modules hosted elsewhere (GitLab, Bitbucket) are
+reported as not a GitHub remote. With `--json`, each module gets a
+`pull_requests` array (or a `pr_error` message).
 
 ### Share a Development Stack
 

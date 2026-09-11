@@ -530,6 +530,27 @@ func TestExecGitTrackingBranchNone(t *testing.T) {
 	}
 }
 
+func TestExecGitRemoteURL(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	localDir, remoteDir := setupClonedRepo(t)
+	g := git.NewExecGit()
+
+	url, err := g.RemoteURL(context.Background(), localDir, "origin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if url != remoteDir {
+		t.Errorf("expected origin url %q, got %q", remoteDir, url)
+	}
+
+	// A remote that does not exist is an error.
+	if _, err := g.RemoteURL(context.Background(), localDir, "nonexistent-remote"); err == nil {
+		t.Error("expected error for nonexistent remote")
+	}
+}
+
 func TestExecGitSubmodulePaths(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")

@@ -14,6 +14,7 @@ import (
 // View: "⠹ Fetching 12/24 plugins/blog..."
 type SpinnerModel struct {
 	spinner  spinner.Model
+	label    string // Verb shown before the counter (default "Fetching")
 	total    int
 	done     int
 	current  string
@@ -30,7 +31,16 @@ func NewSpinnerModel() SpinnerModel {
 	s.Style = StatusCurrentStyle // cyan
 	return SpinnerModel{
 		spinner: s,
+		label:   "Fetching",
 	}
+}
+
+// NewSpinnerModelWithLabel creates a spinner model that shows label instead
+// of "Fetching" before the counter (e.g. "Checking PRs 3/12 plugins/auth...").
+func NewSpinnerModelWithLabel(label string) SpinnerModel {
+	m := NewSpinnerModel()
+	m.label = label
+	return m
 }
 
 // Init implements tea.Model. Starts the spinner tick.
@@ -77,7 +87,7 @@ func (m SpinnerModel) View() string {
 		return m.spinner.View() + " Scanning..."
 	}
 
-	line := fmt.Sprintf("%s Fetching %d/%d", m.spinner.View(), m.done, m.total)
+	line := fmt.Sprintf("%s %s %d/%d", m.spinner.View(), m.label, m.done, m.total)
 	if m.current != "" {
 		line += " " + MutedStyle.Render(m.current+"...")
 	}

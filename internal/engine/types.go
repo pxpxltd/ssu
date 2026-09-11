@@ -5,7 +5,10 @@
 // and compound status detection for submodules.
 package engine
 
-import "github.com/pxpxltd/ssu/internal/git"
+import (
+	"github.com/pxpxltd/ssu/internal/git"
+	"github.com/pxpxltd/ssu/internal/github"
+)
 
 // ---------------------------------------------------------------------------
 // Scan types
@@ -40,6 +43,11 @@ type SubmoduleInfo struct {
 	HasChanges    bool                  // Uncommitted local changes exist
 	Changelog     []string              // Incoming commit summaries (oneline format)
 	Error         error                 // Non-nil if scan failed for this submodule
+
+	// Pull request lookup (populated by AttachPullRequests only).
+	PRChecked    bool                 // True if a PR lookup was attempted
+	PullRequests []github.PullRequest // Open PRs on the module's repository
+	PRError      error                // Non-nil if the PR lookup failed
 }
 
 // statusPriority maps each status to a priority value for display ordering.

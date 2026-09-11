@@ -262,6 +262,14 @@ func (g *ExecGit) IsAncestor(ctx context.Context, dir, ancestor, descendant stri
 	return true, nil
 }
 
+func (g *ExecGit) RemoteURL(ctx context.Context, dir, remote string) (string, error) {
+	stdout, _, err := g.run(ctx, dir, g.Timeouts.Default, "remote", "get-url", remote)
+	if err != nil {
+		return "", err
+	}
+	return stdout, nil
+}
+
 func (g *ExecGit) TrackingBranch(ctx context.Context, dir string) (TrackingInfo, error) {
 	// First get current branch name.
 	branchOut, stderr, err := g.run(ctx, dir, g.Timeouts.Default, "rev-parse", "--abbrev-ref", "HEAD")

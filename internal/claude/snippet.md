@@ -3,7 +3,7 @@
 This project uses SSU for git submodule management. ALWAYS use SSU commands instead of raw git submodule commands.
 
 **Available commands:**
-- `ssu status` -- Show status of all submodules (use `--json` for machine-readable output)
+- `ssu status` -- Show status of all submodules (use `--json` for machine-readable output, `--pr` to list open GitHub pull requests with links)
 - `ssu update --auto` -- Update all pending submodules (auto-initializes missing ones)
 - `ssu push --auto` -- Push all ahead submodules
 - `ssu checkout --auto` -- Resolve detached HEAD in submodules

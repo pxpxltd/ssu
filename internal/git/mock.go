@@ -21,6 +21,7 @@ type MockGitService struct {
 	TrackingBranchFn         func(ctx context.Context, dir string) (TrackingInfo, error)
 	RefExistsFn              func(ctx context.Context, dir, ref string) (bool, error)
 	IsAncestorFn             func(ctx context.Context, dir, ancestor, descendant string) (bool, error)
+	RemoteURLFn              func(ctx context.Context, dir, remote string) (string, error)
 	HasLocalChangesFn        func(ctx context.Context, dir string) (bool, error)
 	IncomingChangelogFn      func(ctx context.Context, dir, remoteRef string, limit int) ([]string, error)
 	FetchFn                  func(ctx context.Context, dir string, opts FetchOpts) (FetchResult, error)
@@ -139,6 +140,13 @@ func (m *MockGitService) IsAncestor(ctx context.Context, dir, ancestor, descenda
 		return m.IsAncestorFn(ctx, dir, ancestor, descendant)
 	}
 	return true, nil
+}
+
+func (m *MockGitService) RemoteURL(ctx context.Context, dir, remote string) (string, error) {
+	if m.RemoteURLFn != nil {
+		return m.RemoteURLFn(ctx, dir, remote)
+	}
+	return "", nil
 }
 
 func (m *MockGitService) HasLocalChanges(ctx context.Context, dir string) (bool, error) {
